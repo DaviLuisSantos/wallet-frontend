@@ -1,19 +1,45 @@
 import React from 'react';
-import { Chart } from 'react-google-charts';
+import { Line, Bar, Pie, Doughnut, PolarArea } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
 
-const ChartComponent = ({ type, data, options }) => {
-  switch (type) {
-    case 'line':
-      return <Chart chartType="LineChart" data={data} options={options} />;
-    case 'bar':
-      return <Chart chartType="BarChart" data={data} options={options} />;
-    case 'pie':
-      return <Chart chartType="PieChart" data={data} options={options} />;
-    case 'scatter':
-      return <Chart chartType="ScatterChart" data={data} options={options} />;
-    default:
-      return <Chart chartType="PieChart" data={data} options={options} />;
-  }
+// Registrar os componentes do Chart.js
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+const ChartComponent = ({ type = 'line', data, options }) => {
+  // Mapear os tipos de gráfico para os componentes correspondentes
+  const chartTypes = {
+    line: Line,
+    bar: Bar,
+    pie: Pie,
+    doughnut: Doughnut,
+    polarArea: PolarArea,
+  };
+
+  // Selecionar o componente de gráfico com base no tipo
+  const Chart = chartTypes[type] || Line;
+
+  return <Chart data={data} options={options} />;
 };
 
 export default ChartComponent;
