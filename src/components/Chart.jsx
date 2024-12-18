@@ -1,19 +1,19 @@
 import React from 'react';
-import { Pie, Line, Bar } from 'react-chartjs-2';
-import { Chart as ChartJS, ArcElement, PointElement, LineElement, BarElement, CategoryScale, LinearScale, Title, Tooltip, Legend } from 'chart.js';
+import { Chart } from 'react-google-charts';
 
-ChartJS.register(ArcElement, PointElement, LineElement, BarElement, CategoryScale, LinearScale, Title, Tooltip, Legend);
-
-const Chart = ({ type, data, options }) => {
-    switch (type) {
-        case 'line':
-            return <Line data={data} options={options} />;
-        case 'bar':
-            return <Bar data={data} options={options} />;
-        case 'pie':
-        default:
-            return <Pie data={data} options={options} />;
-    }
+const ChartComponent = ({ type, data, options }) => {
+  switch (type) {
+    case 'line':
+      return <Chart chartType="LineChart" data={data} options={options} />;
+    case 'bar':
+      return <Chart chartType="BarChart" data={data} options={options} />;
+    case 'pie':
+      return <Chart chartType="PieChart" data={data} options={options} />;
+    case 'scatter':
+      return <Chart chartType="ScatterChart" data={data} options={options} />;
+    default:
+      return <Chart chartType="PieChart" data={data} options={options} />;
+  }
 };
 
-export default Chart;
+export default ChartComponent;
