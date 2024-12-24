@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 import apiClient from '../api/apiClient';
+import { getWallet } from '../api/WalletService';
 
 export const WalletContext = createContext();
 
@@ -8,15 +9,15 @@ export const WalletProvider = ({ children }) => {
 
     const fetchWallets = async () => {
         try {
-            
+
             // Verifica se já há dados no estado antes de buscar
             if (wallets.length > 0) {
                 console.log('Carteiras já carregadas:', wallets);
                 return;
             }
 
-            const response = await apiClient.get('/wallet/');
-            const formattedData = response.data.map(wallet => ({
+            const response = await getWallet();
+            const formattedData = response.map(wallet => ({
                 crypto_id: wallet.crypto_id,
                 balance: wallet.balance,
             }));

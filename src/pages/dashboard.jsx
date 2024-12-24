@@ -77,15 +77,9 @@ const options = {
 };
 
 const Dashboard = () => {
-
     const { cryptocurrencies, fetchCryptocurrencies } = useCryptocurrencies();
-
     const { wallets, fetchWallets } = useWallets();
-
     const { prices, fetchPrices } = usePrices();
-
-
-
 
     const [donutData, setDonutData] = useState({
         labels: [],
@@ -102,16 +96,12 @@ const Dashboard = () => {
     useEffect(() => {
         const fetchDashboard = async () => {
             try {
-
                 await fetchWallets();
-
                 const ids = wallets.map(wallet => wallet.crypto_id);
-
                 await fetchCryptocurrencies(ids);
-
                 await fetchPrices(ids);
 
-                if (wallets && prices && cryptocurrencies) {
+                if (wallets.length > 0 && prices.length > 0 && cryptocurrencies.length > 0) {
                     const labels = [];
                     const data = [];
                     const backgroundColor = [];
@@ -121,25 +111,49 @@ const Dashboard = () => {
                         'rgba(255, 99, 132, 0.2)', 'rgba(54, 162, 235, 0.2)',
                         'rgba(255, 206, 86, 0.2)', 'rgba(75, 192, 192, 0.2)',
                         'rgba(153, 102, 255, 0.2)', 'rgba(255, 159, 64, 0.2)',
+                        'rgba(201, 203, 207, 0.2)', 'rgba(255, 99, 132, 0.2)',
                     ];
 
                     const borderColors = colors.map((c) => c.replace('0.2', '1'));
 
-                    // Process wallet data
                     let colorIndex = 0;
 
-                    Object.entries(wallets).forEach(([walletCryptoId, walletData]) => {
-                        const crypto = cryptocurrencies.find(c => c.id === walletCryptoId);
-                        const price = prices[crypto.id]; // Ou `crypto.id`, se as chaves de `prices` forem os IDs
+                    // Calculate the value of each wallet item
+                    const walletValues = wallets.map(wallet => {
+                        const crypto = cryptocurrencies.find(c => c.id === wallet.crypto_id);
+                        const price = prices.find(p => p.crypto_id === wallet.crypto_id);
                         if (crypto && price) {
-                            const value = walletData.balance * price;
-                            labels.push(crypto.name); // Ou `crypto.symbol`, dependendo da preferência
-                            data.push(value);
-                            backgroundColor.push(colors[colorIndex % colors.length]);
-                            borderColor.push(borderColors[colorIndex % borderColors.length]);
-                            colorIndex++;
+                            const value = wallet.balance * price.price_usd;
+                            return { ...wallet, value, crypto, price };
                         }
+                        return null;
+                    }).filter(item => item !== null);
+
+                    // Sort by value in descending order
+                    walletValues.sort((a, b) => b.value - a.value);
+
+                    // Calculate the total value
+                    const totalValue = walletValues.reduce((sum, item) => sum + item.value, 0);
+
+                    // Take the top 6 and group the rest as "Others"
+                    const top6 = walletValues.slice(0, 6);
+                    const others = walletValues.slice(6);
+
+                    top6.forEach(item => {
+                        labels.push(item.crypto.name);
+                        data.push((item.value / totalValue * 100).toFixed(2)); // Convert to percentage
+                        backgroundColor.push(colors[colorIndex % colors.length]);
+                        borderColor.push(borderColors[colorIndex % borderColors.length]);
+                        colorIndex++;
                     });
+
+                    if (others.length > 0) {
+                        const othersValue = others.reduce((sum, item) => sum + item.value, 0);
+                        labels.push('Others');
+                        data.push((othersValue / totalValue * 100).toFixed(2)); // Convert to percentage
+                        backgroundColor.push(colors[colorIndex % colors.length]);
+                        borderColor.push(borderColors[colorIndex % borderColors.length]);
+                    }
 
                     setDonutData({
                         labels,
@@ -152,18 +166,28 @@ const Dashboard = () => {
                             },
                         ],
                     });
-                }
 
-            }
-            catch (error) {
+                    console.log('Donut chart data:', {
+                        labels,
+                        datasets: [
+                            {
+                                label: 'Cryptocurrency Distribution',
+                                data,
+                                backgroundColor,
+                                borderColor,
+                            },
+                        ],
+                    });
+                } else {
+                    console.log('Missing data for donut chart:', { wallets, prices, cryptocurrencies });
+                }
+            } catch (error) {
                 console.error('Erro ao buscar dados do dashboard:', error);
             }
         };
 
         fetchDashboard();
-
-    }, [wallets, prices, cryptocurrencies]); // Garante que o gráfico será atualizado quando alguma dessas dependências mudar
-
+    }, [wallets, prices, cryptocurrencies, fetchWallets, fetchCryptocurrencies, fetchPrices]);
 
     const donutOptions = {
         responsive: true,
