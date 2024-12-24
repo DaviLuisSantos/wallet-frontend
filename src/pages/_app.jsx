@@ -7,8 +7,8 @@ import { PricesProvider } from '../context/PricesContext';
 
 function MyApp({ Component, pageProps }) {
   return (
-    <CryptocurrenciesProvider>
-      <WalletProvider>
+    <WalletProvider>
+      <CryptocurrenciesProvider>
         <PricesProvider>
           <div className="flex flex-col h-screen">
             {/* Navbar */}
@@ -25,8 +25,8 @@ function MyApp({ Component, pageProps }) {
             </div>
           </div>
         </PricesProvider>
-      </WalletProvider>
-    </CryptocurrenciesProvider>
+      </CryptocurrenciesProvider>
+    </WalletProvider>
   );
 }
 

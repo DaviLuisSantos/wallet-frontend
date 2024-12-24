@@ -1,51 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import CryptoList from '../components/CryptoList';
-import Chart from '../components/Chart';
+import { useCryptocurrencies } from '../context/CryptocurrenciesContext';
+import { useWallets } from '../context/WalletContext';
+import { usePrices } from '../context/PricesContext';
 
 const Wallet = () => {
     const [cryptoItems, setCryptoItems] = useState([]);
     const [totalValueUSD, setTotalValueUSD] = useState(0);
+    const { cryptocurrencies, fetchCryptocurrencies } = useCryptocurrencies();
+    const { wallets, fetchWallets } = useWallets();
+    const { prices, fetchPrices } = usePrices();
 
     useEffect(() => {
         const fetchCryptoItems = async () => {
             try {
-                const response1 = await fetch('http://localhost:3001/wallet/');
-                const balances = await response1.json();
 
-                const ids = balances.map(balance => balance.crypto_id);
+                //const balances = await fetchWallets();
+                await fetchWallets();
 
-                const response2 = await fetch('http://localhost:3001/crypto/manyy', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ids }),
-                });
-                const cryptoNames = await response2.json();
+                const ids = wallets.map(balance => balance.crypto_id);
 
-                const response3 = await fetch('http://localhost:3001/price/manyy', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ids }),
-                });
-                const prices = await response3.json();
+                // Receba os dados diretamente
+                await fetchCryptocurrencies(ids);
+
+                await fetchPrices(ids);
 
                 let totalValueUSD = 0;
                 const cryptoItems = [];
 
-                balances.forEach(balance => {
-                    const crypto = cryptoNames.find(c => c.id === balance.crypto_id);
+                wallets.forEach(balance => {
+                    const crypto = cryptocurrencies.find(c => c.id === balance.crypto_id);
                     const price = prices.find(p => p.crypto_id === balance.crypto_id);
-                    const balanceValueUSD = balance.balance * price.price_usd;
 
-                    totalValueUSD += balanceValueUSD;
+                    if (crypto && price) {
+                        const balanceValueUSD = balance.balance * price.price_usd;
+                        totalValueUSD += balanceValueUSD;
 
-                    cryptoItems.push({
-                        name: crypto.name,
-                        symbol: crypto.symbol,
-                        balance: balance.balance,
-                        value: balanceValueUSD.toFixed(2),
-                        priceUSD: price.price_usd,
-                        icon: crypto.icon,
-                    });
+                        cryptoItems.push({
+                            name: crypto.name,
+                            symbol: crypto.symbol,
+                            balance: balance.balance,
+                            value: balanceValueUSD.toFixed(2),
+                            priceUSD: price.price_usd,
+                            icon: crypto.icon,
+                        });
+                    }
                 });
 
                 setCryptoItems(cryptoItems);
@@ -56,7 +55,8 @@ const Wallet = () => {
         };
 
         fetchCryptoItems();
-    }, []);
+    }, []); // Nenhuma dependência necessária aqui
+
 
     return (
         <div className="flex flex-col gap-4 items-center min-h-screen">

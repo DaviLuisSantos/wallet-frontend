@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ChartComponent from '../components/Chart';
+import { useCryptocurrencies } from '../context/CryptocurrenciesContext';
+import { useWallets } from '../context/WalletContext';
+import { usePrices } from '../context/PricesContext';
 
 const lineData24h = {
     labels: ['0h', '4h', '8h', '12h', '16h', '20h', '24h'],
@@ -59,33 +62,6 @@ const lineDataAll = {
     ],
 };
 
-const donutData = {
-    labels: ['Bitcoin', 'Ethereum', 'Ripple', 'Litecoin', 'Cardano', 'Polkadot'],
-    datasets: [
-        {
-            label: 'Cryptocurrency Distribution',
-            data: [40, 25, 15, 10, 5, 5],
-            backgroundColor: [
-                'rgba(255, 99, 132, 0.2)',
-                'rgba(54, 162, 235, 0.2)',
-                'rgba(255, 206, 86, 0.2)',
-                'rgba(75, 192, 192, 0.2)',
-                'rgba(153, 102, 255, 0.2)',
-                'rgba(255, 159, 64, 0.2)',
-            ],
-            borderColor: [
-                'rgba(255, 99, 132, 1)',
-                'rgba(54, 162, 235, 1)',
-                'rgba(255, 206, 86, 1)',
-                'rgba(75, 192, 192, 1)',
-                'rgba(153, 102, 255, 1)',
-                'rgba(255, 159, 64, 1)',
-            ],
-
-        },
-    ],
-};
-
 const options = {
     responsive: true,
     maintainAspectRatio: false,
@@ -101,6 +77,108 @@ const options = {
 };
 
 const Dashboard = () => {
+
+    const { cryptocurrencies, fetchCryptocurrencies } = useCryptocurrencies();
+
+    const { wallets, fetchWallets } = useWallets();
+
+    const { prices, fetchPrices } = usePrices();
+
+
+
+
+    const [donutData, setDonutData] = useState({
+        labels: [],
+        datasets: [
+            {
+                label: 'Cryptocurrency Distribution',
+                data: [],
+                backgroundColor: [],
+                borderColor: [],
+            },
+        ],
+    });
+
+    useEffect(() => {
+        const fetchDashboard = async () => {
+            try {
+
+                await fetchWallets();
+
+                const ids = wallets.map(wallet => wallet.crypto_id);
+
+                await fetchCryptocurrencies(ids);
+
+                await fetchPrices(ids);
+
+                if (wallets && prices && cryptocurrencies) {
+                    const labels = [];
+                    const data = [];
+                    const backgroundColor = [];
+                    const borderColor = [];
+
+                    const colors = [
+                        'rgba(255, 99, 132, 0.2)', 'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 206, 86, 0.2)', 'rgba(75, 192, 192, 0.2)',
+                        'rgba(153, 102, 255, 0.2)', 'rgba(255, 159, 64, 0.2)',
+                    ];
+
+                    const borderColors = colors.map((c) => c.replace('0.2', '1'));
+
+                    // Process wallet data
+                    let colorIndex = 0;
+
+                    Object.entries(wallets).forEach(([walletCryptoId, walletData]) => {
+                        const crypto = cryptocurrencies.find(c => c.id === walletCryptoId);
+                        const price = prices[crypto.id]; // Ou `crypto.id`, se as chaves de `prices` forem os IDs
+                        if (crypto && price) {
+                            const value = walletData.balance * price;
+                            labels.push(crypto.name); // Ou `crypto.symbol`, dependendo da preferência
+                            data.push(value);
+                            backgroundColor.push(colors[colorIndex % colors.length]);
+                            borderColor.push(borderColors[colorIndex % borderColors.length]);
+                            colorIndex++;
+                        }
+                    });
+
+                    setDonutData({
+                        labels,
+                        datasets: [
+                            {
+                                label: 'Cryptocurrency Distribution',
+                                data,
+                                backgroundColor,
+                                borderColor,
+                            },
+                        ],
+                    });
+                }
+
+            }
+            catch (error) {
+                console.error('Erro ao buscar dados do dashboard:', error);
+            }
+        };
+
+        fetchDashboard();
+
+    }, [wallets, prices, cryptocurrencies]); // Garante que o gráfico será atualizado quando alguma dessas dependências mudar
+
+
+    const donutOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'top',
+            },
+            title: {
+                display: true,
+                text: 'Cryptocurrency Distribution',
+            },
+        },
+    };
+
     const [selectedData, setSelectedData] = useState(lineDataAll);
     const [selectedRange, setSelectedRange] = useState('all');
 
@@ -131,31 +209,31 @@ const Dashboard = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
                 <div className="bg-#222531 shadow-custom rounded-lg p-6 h-full" style={{ height: '400px' }}>
-                                        <div className="flex justify-end space-x-2 mb-4">
-                      <button
-                        onClick={() => handleTimeRangeChange('24h')}
-                        className={`px-4 py-2 rounded ${selectedRange === '24h' ? 'bg-gray-800 text-white' : 'bg-gray-600 text-gray-300'}`}
-                      >
-                        24h
-                      </button>
-                      <button
-                        onClick={() => handleTimeRangeChange('7d')}
-                        className={`px-4 py-2 rounded ${selectedRange === '7d' ? 'bg-gray-800 text-white' : 'bg-gray-600 text-gray-300'}`}
-                      >
-                        7d
-                      </button>
-                      <button
-                        onClick={() => handleTimeRangeChange('30d')}
-                        className={`px-4 py-2 rounded ${selectedRange === '30d' ? 'bg-gray-800 text-white' : 'bg-gray-600 text-gray-300'}`}
-                      >
-                        30d
-                      </button>
-                      <button
-                        onClick={() => handleTimeRangeChange('all')}
-                        className={`px-4 py-2 rounded ${selectedRange === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-600 text-gray-300'}`}
-                      >
-                        All
-                      </button>
+                    <div className="flex justify-end space-x-2 mb-4">
+                        <button
+                            onClick={() => handleTimeRangeChange('24h')}
+                            className={`px-4 py-2 rounded ${selectedRange === '24h' ? 'bg-gray-800 text-white' : 'bg-gray-600 text-gray-300'}`}
+                        >
+                            24h
+                        </button>
+                        <button
+                            onClick={() => handleTimeRangeChange('7d')}
+                            className={`px-4 py-2 rounded ${selectedRange === '7d' ? 'bg-gray-800 text-white' : 'bg-gray-600 text-gray-300'}`}
+                        >
+                            7d
+                        </button>
+                        <button
+                            onClick={() => handleTimeRangeChange('30d')}
+                            className={`px-4 py-2 rounded ${selectedRange === '30d' ? 'bg-gray-800 text-white' : 'bg-gray-600 text-gray-300'}`}
+                        >
+                            30d
+                        </button>
+                        <button
+                            onClick={() => handleTimeRangeChange('all')}
+                            className={`px-4 py-2 rounded ${selectedRange === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-600 text-gray-300'}`}
+                        >
+                            All
+                        </button>
                     </div>
                     <div className="h-full">
                         <ChartComponent type="line" data={selectedData} options={options} />
@@ -163,7 +241,7 @@ const Dashboard = () => {
                 </div>
                 <div className="bg-#222531 shadow-custom rounded-lg p-6 h-full" style={{ height: '400px' }}>
                     <div className="h-full">
-                        <ChartComponent type="doughnut" data={donutData} options={options} />
+                        <ChartComponent type="doughnut" data={donutData} options={donutOptions} />
                     </div>
                 </div>
             </div>
