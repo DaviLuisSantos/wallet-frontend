@@ -3,13 +3,13 @@ import PropTypes from 'prop-types';
 import Image from 'next/image';
 
 const defaultIcon = '';
-const CryptoItem = ({ icon, name, symbol, priceUSD, balance, value }) => {
+const CryptoItem = ({ icon, name, symbol, priceUSD, balance, value, variation }) => {
     const iconPath = icon
         ? `data:image/png;base64, ${icon}`
         : defaultIcon;
 
     return (
-        <div className="grid grid-cols-4 gap-4 items-center bg-gray-800 rounded-lg p-4 shadow hover:bg-gray-700 transition duration-200">
+        <div className="grid grid-cols-5 gap-4 items-center bg-gray-800 rounded-lg p-4 shadow hover:bg-gray-700 transition duration-200">
             {/* Ícone e Nome */}
             <div className="flex items-center">
                 <Image
@@ -39,6 +39,11 @@ const CryptoItem = ({ icon, name, symbol, priceUSD, balance, value }) => {
             <div className="text-teal-400 font-medium">
                 <p>${value}</p>
             </div>
+
+            {/* Variação */}
+            <div className="text-gray-400">
+                <p>{variation}%</p>
+            </div>
         </div>
     );
 };
@@ -50,6 +55,7 @@ CryptoItem.propTypes = {
     priceUSD: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
     balance: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
     value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    variation: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
 };
 
 export default CryptoItem;

@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext } from 'react';
-import apiClient from '../api/apiClient';
+import { getPricesId } from '../api/PriceService';
 
 const PricesContext = createContext();
 
@@ -15,8 +15,8 @@ export const PricesProvider = ({ children }) => {
                 return;
             }
 
-            const response = await apiClient.post('/price/manyy', { ids });
-            const pricesData = response.data;
+            const pricesData = await getPricesId(ids);
+
             setPrices(pricesData);
             //return pricesData;
             console.log('Prices fetched:', pricesData);

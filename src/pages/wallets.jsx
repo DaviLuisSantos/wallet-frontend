@@ -27,10 +27,50 @@ const Wallet = () => {
 
                 const latestPrices = ids.map(id => {
                     const cryptoPrices = prices.filter(price => price?.crypto_id === id);
-                    return cryptoPrices.reduce((latest, current) => {
+                    if (cryptoPrices.length === 0) return null;
+
+                    const latestPrice = cryptoPrices.reduce((latest, current) => {
                         return new Date(latest.timestamp) > new Date(current.timestamp) ? latest : current;
                     }, cryptoPrices[0]);
-                });
+
+                    const price24hAgo = cryptoPrices.reduce((closest, current) => {
+                        const currentTime = new Date(current.timestamp);
+                        const closestTime = new Date(closest.timestamp);
+                        const latestTime = new Date(latestPrice.timestamp);
+
+                        // Calcular a diferença de tempo em relação a 24 horas atrás
+                        const targetTime = new Date(latestTime.getTime() - 24 * 60 * 60 * 1000);
+                        const timeDiffCurrent = Math.abs(currentTime - targetTime);
+                        const timeDiffClosest = Math.abs(closestTime - targetTime);
+
+                        // Verificar se o item atual está no intervalo de 24 horas atrás
+                        const isCurrentValid = currentTime <= latestTime && currentTime >= targetTime;
+                        const isClosestValid = closestTime <= latestTime && closestTime >= targetTime;
+
+                        // Atualizar o mais próximo com base na validade e na diferença de tempo
+                        if (isCurrentValid && (!isClosestValid || timeDiffCurrent < timeDiffClosest)) {
+                            return current;
+                        }
+
+                        return closest;
+                    }, cryptoPrices[0]);
+
+
+                    console.log('latestPrice:', latestPrice);
+                    console.log('price24hAgo:', price24hAgo);
+
+                    let priceChange24h = 0;
+                    if (price24hAgo && price24hAgo.price_usd !== 0) {
+                        priceChange24h = ((latestPrice.price_usd - price24hAgo.price_usd) / price24hAgo.price_usd) * 100;
+                    }
+
+                    console.log(`Moeda: ${priceChange24h.crypto_id}priceChange24h:`, priceChange24h);
+
+                    return {
+                        ...latestPrice,
+                        priceChange24h
+                    };
+                }).filter(price => price !== null);
 
                 let totalValueUSD = 0;
                 const cryptoItems = [];
@@ -50,6 +90,7 @@ const Wallet = () => {
                             value: balanceValueUSD.toFixed(2),
                             priceUSD: price.price_usd,
                             icon: crypto.icon,
+                            variation: price.priceChange24h.toFixed(2)
                         });
                     }
                 });

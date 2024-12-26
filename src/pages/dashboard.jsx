@@ -5,17 +5,25 @@ import { useWallets } from '../context/WalletContext';
 import { usePrices } from '../context/PricesContext';
 
 const lineData24h = {
-    labels: ['0h', '4h', '8h', '12h', '16h', '20h', '24h'],
+    labels: [
+        '0h', '1h', '2h', '3h', '4h', '5h', '6h', '7h', '8h', '9h', '10h', '11h',
+        '12h', '13h', '14h', '15h', '16h', '17h', '18h', '19h', '20h', '21h', '22h', '23h', '24h'
+    ],
     datasets: [
         {
             label: '24h Dataset',
-            data: [100, 150, 120, 180, 140, 160, 130],
+            data: [
+                100, 95, 120, 110, 130, 115, 140, 125, 160, 150,
+                130, 170, 180, 160, 190, 170, 200, 180, 210, 190,
+                220, 200, 230, 210, 220
+            ],
             borderColor: 'rgba(75, 192, 192, 1)',
             backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            tension: 0,
+            tension: 0.2,
         },
     ],
 };
+
 
 const lineData7d = {
     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
@@ -80,6 +88,7 @@ const Dashboard = () => {
     const { cryptocurrencies, fetchCryptocurrencies } = useCryptocurrencies();
     const { wallets, fetchWallets } = useWallets();
     const { prices, fetchPrices } = usePrices();
+    const [totalValueUSD, setTotalValueUSD] = useState(0);
 
     const [donutData, setDonutData] = useState({
         labels: [],
@@ -92,6 +101,8 @@ const Dashboard = () => {
             },
         ],
     });
+
+
 
     useEffect(() => {
         const fetchDashboard = async () => {
@@ -167,6 +178,44 @@ const Dashboard = () => {
                         ],
                     });
 
+                    const latestPrices = ids.map(id => {
+                        const cryptoPrices = prices.filter(price => price?.crypto_id === id);
+                        const latestPrice = cryptoPrices.reduce((latest, current) => {
+                            return new Date(latest.timestamp) > new Date(current.timestamp) ? latest : current;
+                        }, cryptoPrices[0]);
+
+                        const price24hAgo = cryptoPrices.reduce((closest, current) => {
+                            const currentTime = new Date(current.timestamp);
+                            const closestTime = new Date(closest.timestamp);
+                            const latestTime = new Date(latestPrice.timestamp);
+                            const timeDiffCurrent = Math.abs(latestTime - currentTime);
+                            const timeDiffClosest = Math.abs(latestTime - closestTime);
+
+                            return (timeDiffCurrent <= 24 * 60 * 60 * 1000 && timeDiffCurrent < timeDiffClosest) ? current : closest;
+                        }, cryptoPrices[0]);
+
+                        const priceChange24h = ((latestPrice.price_usd - price24hAgo.price_usd) / price24hAgo.price_usd) * 100;
+
+                        return {
+                            ...latestPrice,
+                            priceChange24h
+                        };
+                    });
+
+                    let accumulatedValueUSD = 0;
+
+                    wallets.forEach(balance => {
+                        const crypto = cryptocurrencies.find(c => c.id === balance.crypto_id);
+                        const price = latestPrices.find(p => p?.crypto_id === balance.crypto_id);
+
+                        if (crypto && price) {
+                            const balanceValueUSD = balance.balance * price.price_usd;
+                            accumulatedValueUSD += balanceValueUSD;
+                        }
+                    });
+
+                    setTotalValueUSD(accumulatedValueUSD.toFixed(2));
+
                     console.log('Donut chart data:', {
                         labels,
                         datasets: [
@@ -229,7 +278,7 @@ const Dashboard = () => {
         <div className="container mx-auto p-4">
             <div className="shadow-custom rounded-lg p-6">
                 <h2 className="text-xl text-gray-700">Total Balance</h2>
-                <p className="text-4xl font-bold">$10,000</p>
+                <p className="text-4xl font-bold">{totalValueUSD}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
                 <div className="bg-#222531 shadow-custom rounded-lg p-6 h-full" style={{ height: '400px' }}>
