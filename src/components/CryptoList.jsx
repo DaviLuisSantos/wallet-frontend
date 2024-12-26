@@ -19,12 +19,12 @@ const CryptoList = ({ items }) => {
         // Tentar converter os valores para números
         const aValue = Number(a[sortKey]);
         const bValue = Number(b[sortKey]);
-    
+
         // Se ambos forem números válidos, fazer a comparação numérica
         if (!isNaN(aValue) && !isNaN(bValue)) {
             return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
         }
-    
+
         // Caso contrário, ordenar alfabeticamente (para strings)
         const aString = String(a[sortKey]);
         const bString = String(b[sortKey]);
@@ -32,7 +32,7 @@ const CryptoList = ({ items }) => {
             ? aString.localeCompare(bString)
             : bString.localeCompare(aString);
     });
-    
+
 
 
     return (
@@ -42,7 +42,7 @@ const CryptoList = ({ items }) => {
                 <button onClick={() => handleSort('priceUSD')} className="text-left">Preço</button>
                 <button onClick={() => handleSort('balance')} className="text-left">Saldo</button>
                 <button onClick={() => handleSort('value')} className="text-left">Valor</button>
-                <button onClick={() => handleSort('variation')} className="text-left">Variação 24h</button>    
+                <button onClick={() => handleSort('variation')} className="text-left">Variação 24h</button>
             </div>
             {sortedItems.map((item, index) => (
                 <CryptoItem
@@ -54,6 +54,7 @@ const CryptoList = ({ items }) => {
                     balance={item.balance}
                     value={item.value}
                     variation={item.variation}
+                    latestPrices={item.latestPrices}
                 />
             ))}
         </div>
@@ -69,6 +70,13 @@ CryptoList.propTypes = {
             priceUSD: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
             balance: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
             value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+            variation: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+            latestPrices: PropTypes.arrayOf(
+                PropTypes.shape({
+                    timestamp: PropTypes.string.isRequired,
+                    price_usd: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+                })
+            ).isRequired,
         })
     ).isRequired,
 };

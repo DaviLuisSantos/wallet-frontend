@@ -1,49 +1,107 @@
-import React from 'react';
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import Image from 'next/image';
+import ChartComponent from './Chart';
 
 const defaultIcon = '';
-const CryptoItem = ({ icon, name, symbol, priceUSD, balance, value, variation }) => {
+const CryptoItem = ({ icon, name, symbol, priceUSD, balance, value, variation, latestPrices }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+
     const iconPath = icon
         ? `data:image/png;base64, ${icon}`
         : defaultIcon;
 
+    const toggleExpand = () => {
+        setIsExpanded(!isExpanded);
+    };
+
+    // Sort latestPrices by timestamp
+    const sortedPrices = latestPrices.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+    // Filter latestPrices to include only data points that are 2 hours apart
+    const filteredPrices = sortedPrices.filter((price, index, array) => {
+        if (index === 0) return true;
+        const previousPrice = array[index - 1];
+        const currentTime = new Date(price.timestamp);
+        const previousTime = new Date(previousPrice.timestamp);
+        return (currentTime - previousTime) >= 2 * 60 * 60 * 1000; // 2 hours in milliseconds
+    });
+
+    // Prepare data for the line chart
+    const chartData = {
+        labels: filteredPrices.map(price => new Date(price.timestamp).toLocaleString()),
+        datasets: [
+            {
+                label: `${name} Price (USD)`,
+                data: filteredPrices.map(price => price.price_usd),
+                borderColor: 'rgba(75, 192, 192, 1)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.2,
+            },
+        ],
+    };
+
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'top',
+            },
+            title: {
+                display: true,
+                text: `${name} Price Over Time`,
+            },
+        },
+    };
+
     return (
-        <div className="grid grid-cols-5 gap-4 items-center bg-gray-800 rounded-lg p-4 shadow hover:bg-gray-700 transition duration-200">
-            {/* Ícone e Nome */}
-            <div className="flex items-center">
-                <Image
-                    src={iconPath}
-                    alt={`${name} icon`}
-                    width={64}
-                    height={64}
-                    className="rounded-full mr-4"
-                />
-                <div className="flex flex-col">
-                    <h3 className="text-white font-semibold">{name}</h3>
-                    <span className="text-gray-400">({symbol})</span>
+        <div className="bg-gray-800 rounded-lg p-4 shadow hover:bg-gray-700 transition duration-200">
+            <div className="grid grid-cols-5 gap-4 items-center cursor-pointer" onClick={toggleExpand}>
+                {/* Ícone e Nome */}
+                <div className="flex items-center">
+                    <Image
+                        src={iconPath}
+                        alt={`${name} icon`}
+                        width={64}
+                        height={64}
+                        className="rounded-full mr-4"
+                    />
+                    <div className="flex flex-col">
+                        <h3 className="text-white font-semibold">{name}</h3>
+                        <span className="text-gray-400">({symbol})</span>
+                    </div>
+                </div>
+
+                {/* Preço */}
+                <div className="text-gray-400">
+                    <p>${priceUSD}</p>
+                </div>
+
+                {/* Saldo */}
+                <div className="text-gray-400">
+                    <p>{balance}</p>
+                </div>
+
+                {/* Valor */}
+                <div className="text-teal-400 font-medium">
+                    <p>${value}</p>
+                </div>
+
+                {/* Variação */}
+                <div className="text-gray-400">
+                    <p>{variation}%</p>
                 </div>
             </div>
 
-            {/* Preço */}
-            <div className="text-gray-400">
-                <p>${priceUSD}</p>
-            </div>
-
-            {/* Saldo */}
-            <div className="text-gray-400">
-                <p>{balance}</p>
-            </div>
-
-            {/* Valor */}
-            <div className="text-teal-400 font-medium">
-                <p>${value}</p>
-            </div>
-
-            {/* Variação */}
-            <div className="text-gray-400">
-                <p>{variation}%</p>
-            </div>
+            {isExpanded && (
+                <div className="mt-4 bg-gray-700 rounded-lg p-4">
+                    <h4 className="text-white font-semibold mb-2">Últimos Valores</h4>
+                    <div className="h-64">
+                        <ChartComponent type="line" data={chartData} options={chartOptions} />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -56,6 +114,10 @@ CryptoItem.propTypes = {
     balance: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
     value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
     variation: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    latestPrices: PropTypes.arrayOf(PropTypes.shape({
+        timestamp: PropTypes.string.isRequired,
+        price_usd: PropTypes.number.isRequired,
+    })).isRequired,
 };
 
 export default CryptoItem;

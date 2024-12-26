@@ -14,15 +14,11 @@ const Wallet = () => {
     useEffect(() => {
         const fetchCryptoItems = async () => {
             try {
-
-                //const balances = await fetchWallets();
                 await fetchWallets();
 
-                const ids = wallets.map(balance => balance.crypto_id);
+                const ids = wallets.map(wallet => wallet.crypto_id);
 
-                // Receba os dados diretamente
                 await fetchCryptocurrencies(ids);
-
                 await fetchPrices(ids);
 
                 const latestPrices = ids.map(id => {
@@ -55,20 +51,15 @@ const Wallet = () => {
                         return closest;
                     }, cryptoPrices[0]);
 
-
-                    console.log('latestPrice:', latestPrice);
-                    console.log('price24hAgo:', price24hAgo);
-
                     let priceChange24h = 0;
                     if (price24hAgo && price24hAgo.price_usd !== 0) {
                         priceChange24h = ((latestPrice.price_usd - price24hAgo.price_usd) / price24hAgo.price_usd) * 100;
                     }
 
-                    console.log(`Moeda: ${priceChange24h.crypto_id}priceChange24h:`, priceChange24h);
-
                     return {
                         ...latestPrice,
-                        priceChange24h
+                        priceChange24h,
+                        allPrices: cryptoPrices // Include all prices for the crypto
                     };
                 }).filter(price => price !== null);
 
@@ -90,7 +81,8 @@ const Wallet = () => {
                             value: balanceValueUSD.toFixed(2),
                             priceUSD: price.price_usd,
                             icon: crypto.icon,
-                            variation: price.priceChange24h.toFixed(2)
+                            variation: price.priceChange24h.toFixed(2),
+                            latestPrices: price.allPrices // Pass all prices for the crypto
                         });
                     }
                 });
@@ -103,7 +95,7 @@ const Wallet = () => {
         };
 
         fetchCryptoItems();
-    }, [cryptocurrencies, wallets, prices]); // Nenhuma dependência necessária aqui
+    }, [cryptocurrencies, wallets, prices, fetchWallets, fetchCryptocurrencies, fetchPrices]);
 
 
     return (
