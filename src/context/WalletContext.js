@@ -12,7 +12,7 @@ export const WalletProvider = ({ children }) => {
 
             // Verifica se já há dados no estado antes de buscar
             if (wallets.length > 0) {
-                console.log('Carteiras já carregadas:', wallets);
+                console.log('Carteiras já carregadas');
                 return;
             }
 

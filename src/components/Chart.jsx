@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Line, Bar, Pie, Doughnut, PolarArea } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -27,6 +27,14 @@ ChartJS.register(
 );
 
 const ChartComponent = ({ type = 'line', data, options }) => {
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      import('chartjs-plugin-zoom').then((zoomPlugin) => {
+        ChartJS.register(zoomPlugin.default);
+      });
+    }
+  }, []);
+
   // Mapear os tipos de gráfico para os componentes correspondentes
   const chartTypes = {
     line: Line,

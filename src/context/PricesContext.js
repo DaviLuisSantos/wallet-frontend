@@ -4,22 +4,20 @@ import { getPricesId } from '../api/PriceService';
 const PricesContext = createContext();
 
 export const PricesProvider = ({ children }) => {
-    const [prices, setPrices] = useState([]);
+    const [prices, setPrices] = useState({});
 
     const fetchPrices = async (ids) => {
         try {
-
-            // Verifica se já há dados no estado antes de buscar
-            if (prices.length > 0) {
-                console.log('Preços já carregados:', prices);
-                return;
-            }
-
             const pricesData = await getPricesId(ids);
 
-            setPrices(pricesData);
-            //return pricesData;
-            console.log('Prices fetched:', pricesData);
+            // Organizar os preços por crypto_id
+            const organizedPrices = ids.reduce((acc, id) => {
+                acc[id] = pricesData.filter(price => price.crypto_id === id);
+                return acc;
+            }, {});
+
+            setPrices(organizedPrices);
+            console.log('Prices fetched and organized by crypto_id');
         } catch (error) {
             console.error('Erro ao buscar preços:', error);
         }

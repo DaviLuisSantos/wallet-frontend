@@ -2,7 +2,7 @@ import axios from "axios";
 
 const apiClient = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001",
-    timeout: 10000, // tempo limite de 10 segundos
+    timeout: 60000, // tempo limite de 10 segundos
     headers: {
         "Content-Type": "application/json",
     },

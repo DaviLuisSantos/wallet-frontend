@@ -22,8 +22,8 @@ const Wallet = () => {
                 await fetchPrices(ids);
 
                 const latestPrices = ids.map(id => {
-                    const cryptoPrices = prices.filter(price => price?.crypto_id === id);
-                    if (cryptoPrices.length === 0) return null;
+                    const cryptoPrices = prices[id];
+                    if (!cryptoPrices || cryptoPrices.length === 0) return null;
 
                     const latestPrice = cryptoPrices.reduce((latest, current) => {
                         return new Date(latest.timestamp) > new Date(current.timestamp) ? latest : current;
@@ -62,7 +62,6 @@ const Wallet = () => {
                         allPrices: cryptoPrices // Include all prices for the crypto
                     };
                 }).filter(price => price !== null);
-
                 let totalValueUSD = 0;
                 const cryptoItems = [];
 
@@ -101,7 +100,7 @@ const Wallet = () => {
     return (
         <div className="flex flex-col gap-4 items-center min-h-screen">
             <div className="flex flex-col w-full h-screen rounded-lg shadow-lg p-6">
-                <h1 className="text-3xl font-bold mb-4 text-center text-teal-400">My Crypto Wallet</h1>
+                <h1 className="text-3xl font-bold mb-4 text-center text-teal-400">Minha Carteira Cripto</h1>
 
                 <div className="mb-4">
                     <p className="text-lg text-gray-400 text-center">

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import Image from 'next/image';
-import ChartComponent from './Chart';
+import CryptoLineChart from './CryptoLineChart';
 
 const defaultIcon = '';
 const CryptoItem = ({ icon, name, symbol, priceUSD, balance, value, variation, latestPrices }) => {
     const [isExpanded, setIsExpanded] = useState(false);
+    const [selectedRange, setSelectedRange] = useState('24h');
 
     const iconPath = icon
         ? `data:image/png;base64, ${icon}`
@@ -13,46 +14,6 @@ const CryptoItem = ({ icon, name, symbol, priceUSD, balance, value, variation, l
 
     const toggleExpand = () => {
         setIsExpanded(!isExpanded);
-    };
-
-    // Sort latestPrices by timestamp
-    const sortedPrices = latestPrices.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-    // Filter latestPrices to include only data points that are 2 hours apart
-    const filteredPrices = sortedPrices.filter((price, index, array) => {
-        if (index === 0) return true;
-        const previousPrice = array[index - 1];
-        const currentTime = new Date(price.timestamp);
-        const previousTime = new Date(previousPrice.timestamp);
-        return (currentTime - previousTime) >= 2 * 60 * 60 * 1000; // 2 hours in milliseconds
-    });
-
-    // Prepare data for the line chart
-    const chartData = {
-        labels: filteredPrices.map(price => new Date(price.timestamp).toLocaleString()),
-        datasets: [
-            {
-                label: `${name} Price (USD)`,
-                data: filteredPrices.map(price => price.price_usd),
-                borderColor: 'rgba(75, 192, 192, 1)',
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                tension: 0.2,
-            },
-        ],
-    };
-
-    const chartOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                position: 'top',
-            },
-            title: {
-                display: true,
-                text: `${name} Price Over Time`,
-            },
-        },
     };
 
     return (
@@ -97,8 +58,28 @@ const CryptoItem = ({ icon, name, symbol, priceUSD, balance, value, variation, l
             {isExpanded && (
                 <div className="mt-4 bg-gray-700 rounded-lg p-4">
                     <h4 className="text-white font-semibold mb-2">Últimos Valores</h4>
-                    <div className="h-64">
-                        <ChartComponent type="line" data={chartData} options={chartOptions} />
+                    <div className="flex justify-end space-x-2 mb-4">
+                        <button
+                            onClick={() => setSelectedRange('24h')}
+                            className={`px-4 py-2 rounded ${selectedRange === '24h' ? 'bg-gray-600 text-white' : 'bg-gray-800 text-gray-300'}`}
+                        >
+                            24h
+                        </button>
+                        <button
+                            onClick={() => setSelectedRange('7d')}
+                            className={`px-4 py-2 rounded ${selectedRange === '7d' ? 'bg-gray-600 text-white' : 'bg-gray-800 text-gray-300'}`}
+                        >
+                            7d
+                        </button>
+                        <button
+                            onClick={() => setSelectedRange('30d')}
+                            className={`px-4 py-2 rounded ${selectedRange === '30d' ? 'bg-gray-600 text-white' : 'bg-gray-800 text-gray-300'}`}
+                        >
+                            30d
+                        </button>
+                    </div>
+                    <div className="h-96"> {/* Aumenta a altura do gráfico */}
+                        <CryptoLineChart name={name} latestPrices={latestPrices} selectedRange={selectedRange} />
                     </div>
                 </div>
             )}

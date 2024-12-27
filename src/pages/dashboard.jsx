@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import ChartComponent from '../components/Chart';
+import CryptoCard from '../components/CryptoCard';
 import { useCryptocurrencies } from '../context/CryptocurrenciesContext';
 import { useWallets } from '../context/WalletContext';
 import { usePrices } from '../context/PricesContext';
+
 
 const lineData24h = {
     labels: [
@@ -89,6 +91,8 @@ const Dashboard = () => {
     const { wallets, fetchWallets } = useWallets();
     const { prices, fetchPrices } = usePrices();
     const [totalValueUSD, setTotalValueUSD] = useState(0);
+    const [topGainer, setTopGainer] = useState(null);
+    const [topLoser, setTopLoser] = useState(null);
 
     const [donutData, setDonutData] = useState({
         labels: [],
@@ -102,8 +106,6 @@ const Dashboard = () => {
         ],
     });
 
-
-
     useEffect(() => {
         const fetchDashboard = async () => {
             try {
@@ -112,7 +114,7 @@ const Dashboard = () => {
                 await fetchCryptocurrencies(ids);
                 await fetchPrices(ids);
 
-                if (wallets.length > 0 && prices.length > 0 && cryptocurrencies.length > 0) {
+                if (wallets.length > 0 && Object.keys(prices).length > 0 && cryptocurrencies.length > 0) {
                     const labels = [];
                     const data = [];
                     const backgroundColor = [];
@@ -132,7 +134,7 @@ const Dashboard = () => {
                     // Calculate the value of each wallet item
                     const walletValues = wallets.map(wallet => {
                         const crypto = cryptocurrencies.find(c => c.id === wallet.crypto_id);
-                        const price = prices.find(p => p.crypto_id === wallet.crypto_id);
+                        const price = prices[wallet.crypto_id]?.[0]; // Get the latest price
                         if (crypto && price) {
                             const value = wallet.balance * price.price_usd;
                             return { ...wallet, value, crypto, price };
@@ -179,7 +181,9 @@ const Dashboard = () => {
                     });
 
                     const latestPrices = ids.map(id => {
-                        const cryptoPrices = prices.filter(price => price?.crypto_id === id);
+                        const cryptoPrices = prices[id];
+                        if (!cryptoPrices || cryptoPrices.length === 0) return null;
+
                         const latestPrice = cryptoPrices.reduce((latest, current) => {
                             return new Date(latest.timestamp) > new Date(current.timestamp) ? latest : current;
                         }, cryptoPrices[0]);
@@ -188,19 +192,35 @@ const Dashboard = () => {
                             const currentTime = new Date(current.timestamp);
                             const closestTime = new Date(closest.timestamp);
                             const latestTime = new Date(latestPrice.timestamp);
-                            const timeDiffCurrent = Math.abs(latestTime - currentTime);
-                            const timeDiffClosest = Math.abs(latestTime - closestTime);
 
-                            return (timeDiffCurrent <= 24 * 60 * 60 * 1000 && timeDiffCurrent < timeDiffClosest) ? current : closest;
+                            // Calcular a diferença de tempo em relação a 24 horas atrás
+                            const targetTime = new Date(latestTime.getTime() - 24 * 60 * 60 * 1000);
+                            const timeDiffCurrent = Math.abs(currentTime - targetTime);
+                            const timeDiffClosest = Math.abs(closestTime - targetTime);
+
+                            // Verificar se o item atual está no intervalo de 24 horas atrás
+                            const isCurrentValid = currentTime <= latestTime && currentTime >= targetTime;
+                            const isClosestValid = closestTime <= latestTime && closestTime >= targetTime;
+
+                            // Atualizar o mais próximo com base na validade e na diferença de tempo
+                            if (isCurrentValid && (!isClosestValid || timeDiffCurrent < timeDiffClosest)) {
+                                return current;
+                            }
+
+                            return closest;
                         }, cryptoPrices[0]);
 
-                        const priceChange24h = ((latestPrice.price_usd - price24hAgo.price_usd) / price24hAgo.price_usd) * 100;
+                        let priceChange24h = 0;
+                        if (price24hAgo && price24hAgo.price_usd !== 0) {
+                            priceChange24h = ((latestPrice.price_usd - price24hAgo.price_usd) / price24hAgo.price_usd) * 100;
+                        }
 
                         return {
                             ...latestPrice,
-                            priceChange24h
+                            priceChange24h,
+                            allPrices: cryptoPrices // Include all prices for the crypto
                         };
-                    });
+                    }).filter(price => price !== null);
 
                     let accumulatedValueUSD = 0;
 
@@ -215,6 +235,25 @@ const Dashboard = () => {
                     });
 
                     setTotalValueUSD(accumulatedValueUSD.toFixed(2));
+
+                    // Find the top gainer and top loser
+                    const topGainer = latestPrices.reduce((max, price) => price.priceChange24h > max.priceChange24h ? price : max, latestPrices[0]);
+                    const topLoser = latestPrices.reduce((min, price) => price.priceChange24h < min.priceChange24h ? price : min, latestPrices[0]);
+
+                    const topGainerCrypto = cryptocurrencies.find(c => c.id === topGainer.crypto_id);
+                    const topLoserCrypto = cryptocurrencies.find(c => c.id === topLoser.crypto_id);
+
+                    setTopGainer({
+                        ...topGainer,
+                        name: topGainerCrypto?.name,
+                        icon: topGainerCrypto?.icon,
+                    });
+
+                    setTopLoser({
+                        ...topLoser,
+                        name: topLoserCrypto?.name,
+                        icon: topLoserCrypto?.icon,
+                    });
 
                     console.log('Donut chart data:', {
                         labels,
@@ -319,17 +358,25 @@ const Dashboard = () => {
                 </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                <div className="bg-gradient-to-t from-gray-100 to-gray-500 shadow-custom rounded-lg p-4">
-                    <h2 className="text-xl font-bold">Total Balance</h2>
-                    <p className="text-gray-700">$10,000</p>
+                <div className="shadow-custom rounded-lg p-4">
+                    {topGainer && (
+                        <CryptoCard
+                            icon={<img src={`data:image/png;base64, ${topGainer.icon}`} alt={`${topGainer.name} icon`} width={64} height={64} />}
+                            variation={topGainer.priceChange24h}
+                        />
+                    )}
                 </div>
                 <div className="bg-gradient-to-t from-gray-100 to-gray-500 shadow-custom rounded-lg p-4">
                     <h2 className="text-xl font-bold">Recent Transactions</h2>
                     <p className="text-gray-700">Transaction details...</p>
                 </div>
-                <div className="bg-gradient-to-t from-gray-100 to-gray-500 shadow-custom rounded-lg p-4">
-                    <h2 className="text-xl font-bold">Market Trends</h2>
-                    <p className="text-gray-700">Market trends details...</p>
+                <div className=" shadow-custom rounded-lg p-4">
+                    {topLoser && (
+                        <CryptoCard
+                            icon={<img src={`data:image/png;base64, ${topLoser.icon}`} alt={`${topLoser.name} icon`} width={64} height={64} />}
+                            variation={topLoser.priceChange24h}
+                        />
+                    )}
                 </div>
             </div>
             <div className="mt-4">

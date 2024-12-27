@@ -11,7 +11,7 @@ export const CryptocurrenciesProvider = ({ children }) => {
 
             // Verifica se já há dados no estado antes de buscar
             if (cryptocurrencies.length > 0) {
-                console.log('Criptos já carregados:', cryptocurrencies);
+                console.log('Criptos já carregados');
                 return;
             }
 
