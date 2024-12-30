@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import ChartComponent from './Chart';
 
 const CryptoLineChart = ({ name, latestPrices, selectedRange }) => {
+    console.log(latestPrices);
     const filterAndGroupPricesByRange = (range) => {
         const now = new Date();
         let filteredPrices;
@@ -41,7 +42,7 @@ const CryptoLineChart = ({ name, latestPrices, selectedRange }) => {
     const formatLabel = (timestamp) => {
         const date = new Date(timestamp);
         if (selectedRange === '24h') {
-            return date.toTimeString().split(' ')[0]; // Formato hh:mm:ss
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); // Formato HH:mm
         } else {
             return date.toLocaleDateString('pt-BR'); // Formato dd/mm/yyyy
         }
@@ -61,6 +62,13 @@ const CryptoLineChart = ({ name, latestPrices, selectedRange }) => {
         ],
     };
 
+    // Calculate Fibonacci retracement levels
+    const prices = sortedPrices.map(price => price.price_usd);
+    const maxPrice = Math.max(...prices);
+    const minPrice = Math.min(...prices);
+    const diff = maxPrice - minPrice;
+    const fibLevels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1].map(level => maxPrice - diff * level);
+
     const chartOptions = {
         responsive: true,
         maintainAspectRatio: false,
@@ -71,6 +79,31 @@ const CryptoLineChart = ({ name, latestPrices, selectedRange }) => {
             title: {
                 display: true,
                 text: `${name} Price Over Time`,
+            },
+            annotation: {
+                annotations: fibLevels.map((level, index) => {
+                    let borderColor;
+                    if (index === 3) {
+                        borderColor = 'rgba(0, 0, 255, 0.5)'; // Middle line (0.5) - Blue
+                    } else if (index < 3) {
+                        borderColor = 'rgba(0, 255, 0, 0.5)'; // Lines above middle - Green
+                    } else {
+                        borderColor = 'rgba(255, 0, 0, 0.5)'; // Lines below middle - Red
+                    }
+                    return {
+                        type: 'line',
+                        mode: 'horizontal',
+                        scaleID: 'y',
+                        value: level,
+                        borderColor: borderColor,
+                        borderWidth: 1,
+                        label: {
+                            content: `Fib ${index}`,
+                            enabled: true,
+                            position: 'right',
+                        },
+                    };
+                }),
             },
             zoom: { // Adiciona suporte ao plugin de zoom
                 pan: {

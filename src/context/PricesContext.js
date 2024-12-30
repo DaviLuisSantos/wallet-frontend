@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useCallback } from 'react';
 import { getPricesId } from '../api/PriceService';
 
 const PricesContext = createContext();
@@ -6,22 +6,32 @@ const PricesContext = createContext();
 export const PricesProvider = ({ children }) => {
     const [prices, setPrices] = useState({});
 
-    const fetchPrices = async (ids) => {
+    const fetchPrices = useCallback(async (ids) => {
         try {
-            const pricesData = await getPricesId(ids);
+            // Check if prices for the given IDs are already available
+            const missingIds = ids.filter(id => !prices[id] || prices[id].length === 0);
+            if (missingIds.length === 0) {
+                console.log('Prices already fetched for all IDs');
+                return;
+            }
 
-            // Organizar os preços por crypto_id
-            const organizedPrices = ids.reduce((acc, id) => {
+            const pricesData = await getPricesId(missingIds);
+
+            // Organize the prices by crypto_id
+            const organizedPrices = missingIds.reduce((acc, id) => {
                 acc[id] = pricesData.filter(price => price.crypto_id === id);
                 return acc;
             }, {});
 
-            setPrices(organizedPrices);
+            setPrices(prevPrices => ({
+                ...prevPrices,
+                ...organizedPrices,
+            }));
             console.log('Prices fetched and organized by crypto_id');
         } catch (error) {
             console.error('Erro ao buscar preços:', error);
         }
-    };
+    }, [prices]);
 
     return (
         <PricesContext.Provider value={{ prices, fetchPrices }}>

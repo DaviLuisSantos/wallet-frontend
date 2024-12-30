@@ -111,8 +111,8 @@ const Dashboard = () => {
             try {
                 await fetchWallets();
                 const ids = wallets.map(wallet => wallet.crypto_id);
-                await fetchCryptocurrencies(ids);
                 await fetchPrices(ids);
+                await fetchCryptocurrencies(ids);
 
                 if (wallets.length > 0 && Object.keys(prices).length > 0 && cryptocurrencies.length > 0) {
                     const labels = [];
@@ -275,7 +275,7 @@ const Dashboard = () => {
         };
 
         fetchDashboard();
-    }, [wallets, prices, cryptocurrencies, fetchWallets, fetchCryptocurrencies, fetchPrices]);
+    }, [wallets, cryptocurrencies, fetchWallets, fetchCryptocurrencies, fetchPrices]);
 
     const donutOptions = {
         responsive: true,

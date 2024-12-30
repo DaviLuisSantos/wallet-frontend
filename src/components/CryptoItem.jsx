@@ -36,12 +36,12 @@ const CryptoItem = ({ icon, name, symbol, priceUSD, balance, value, variation, l
 
                 {/* Preço */}
                 <div className="text-gray-400">
-                    <p>${priceUSD}</p>
+                    <p>{balance}</p>
                 </div>
 
                 {/* Saldo */}
                 <div className="text-gray-400">
-                    <p>{balance}</p>
+                    <p>${priceUSD}</p>
                 </div>
 
                 {/* Valor */}

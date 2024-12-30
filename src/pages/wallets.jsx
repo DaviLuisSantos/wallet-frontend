@@ -14,12 +14,14 @@ const Wallet = () => {
     useEffect(() => {
         const fetchCryptoItems = async () => {
             try {
-                await fetchWallets();
+
+                if (wallets.length === 0) await fetchWallets();
 
                 const ids = wallets.map(wallet => wallet.crypto_id);
 
-                await fetchCryptocurrencies(ids);
-                await fetchPrices(ids);
+                if (prices.length === 0) await fetchPrices(ids);
+
+                if (cryptocurrencies.length === 0) await fetchCryptocurrencies(ids);
 
                 const latestPrices = ids.map(id => {
                     const cryptoPrices = prices[id];
@@ -94,8 +96,7 @@ const Wallet = () => {
         };
 
         fetchCryptoItems();
-    }, [cryptocurrencies, wallets, prices, fetchWallets, fetchCryptocurrencies, fetchPrices]);
-
+    }, [cryptocurrencies, prices, wallets, fetchWallets, fetchCryptocurrencies, fetchPrices]);
 
     return (
         <div className="flex flex-col gap-4 items-center min-h-screen">

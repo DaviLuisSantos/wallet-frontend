@@ -12,8 +12,9 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import annotationPlugin from 'chartjs-plugin-annotation';
 
-// Registrar os componentes do Chart.js
+// Register the components and plugins with Chart.js
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -23,7 +24,8 @@ ChartJS.register(
   ArcElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  annotationPlugin
 );
 
 const ChartComponent = ({ type = 'line', data, options }) => {
@@ -35,7 +37,7 @@ const ChartComponent = ({ type = 'line', data, options }) => {
     }
   }, []);
 
-  // Mapear os tipos de gráfico para os componentes correspondentes
+  // Map the chart types to the corresponding components
   const chartTypes = {
     line: Line,
     bar: Bar,
@@ -44,7 +46,7 @@ const ChartComponent = ({ type = 'line', data, options }) => {
     polarArea: PolarArea,
   };
 
-  // Selecionar o componente de gráfico com base no tipo
+  // Select the chart component based on the type
   const Chart = chartTypes[type] || Line;
 
   return <Chart data={data} options={options} />;
