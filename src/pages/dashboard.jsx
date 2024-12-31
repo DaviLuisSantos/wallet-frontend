@@ -110,7 +110,7 @@ const Dashboard = () => {
         const fetchDashboard = async () => {
             try {
                 await fetchWallets();
-                const ids = wallets.map(wallet => wallet.crypto_id);
+                const ids = wallets.map(wallet => wallet.CryptoId);
                 await fetchPrices(ids);
                 await fetchCryptocurrencies(ids);
 
@@ -133,8 +133,8 @@ const Dashboard = () => {
 
                     // Calculate the value of each wallet item
                     const walletValues = wallets.map(wallet => {
-                        const crypto = cryptocurrencies.find(c => c.id === wallet.crypto_id);
-                        const price = prices[wallet.crypto_id]?.[0]; // Get the latest price
+                        const crypto = cryptocurrencies.find(c => c.id === wallet.CryptoId);
+                        const price = prices[wallet.CryptoId]?.[0]; // Get the latest price
                         if (crypto && price) {
                             const value = wallet.balance * price.price_usd;
                             return { ...wallet, value, crypto, price };
@@ -225,8 +225,8 @@ const Dashboard = () => {
                     let accumulatedValueUSD = 0;
 
                     wallets.forEach(balance => {
-                        const crypto = cryptocurrencies.find(c => c.id === balance.crypto_id);
-                        const price = latestPrices.find(p => p?.crypto_id === balance.crypto_id);
+                        const crypto = cryptocurrencies.find(c => c.id === balance.CryptoId);
+                        const price = latestPrices.find(p => p?.CryptoId === balance.CryptoId);
 
                         if (crypto && price) {
                             const balanceValueUSD = balance.balance * price.price_usd;
@@ -240,8 +240,8 @@ const Dashboard = () => {
                     const topGainer = latestPrices.reduce((max, price) => price.priceChange24h > max.priceChange24h ? price : max, latestPrices[0]);
                     const topLoser = latestPrices.reduce((min, price) => price.priceChange24h < min.priceChange24h ? price : min, latestPrices[0]);
 
-                    const topGainerCrypto = cryptocurrencies.find(c => c.id === topGainer.crypto_id);
-                    const topLoserCrypto = cryptocurrencies.find(c => c.id === topLoser.crypto_id);
+                    const topGainerCrypto = cryptocurrencies.find(c => c.id === topGainer.CryptoId);
+                    const topLoserCrypto = cryptocurrencies.find(c => c.id === topLoser.CryptoId);
 
                     setTopGainer({
                         ...topGainer,

@@ -15,7 +15,9 @@ export const CryptocurrenciesProvider = ({ children }) => {
                 return;
             }
 
-            const response = await apiClient.post('/crypto/manyy', { ids });
+            const queryString = ids.map(id => `${id}`).join(',');
+
+            const response = await apiClient.get(`/api/Criptocurrency/?ids=${queryString}`);
 
             const data = response.data.map(crypto => ({
                 id: crypto.id,
@@ -24,7 +26,7 @@ export const CryptocurrenciesProvider = ({ children }) => {
                 icon: crypto.icon,
                 source: crypto.source,
             }));
-            
+
             setCryptocurrencies(data);
             //return data; // Retorna os dados
         } catch (error) {

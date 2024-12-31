@@ -17,7 +17,7 @@ const Wallet = () => {
 
                 if (wallets.length === 0) await fetchWallets();
 
-                const ids = wallets.map(wallet => wallet.crypto_id);
+                const ids = wallets.map(wallet => wallet.CryptoId);
 
                 if (prices.length === 0) await fetchPrices(ids);
 
@@ -68,8 +68,8 @@ const Wallet = () => {
                 const cryptoItems = [];
 
                 wallets.forEach(balance => {
-                    const crypto = cryptocurrencies.find(c => c.id === balance.crypto_id);
-                    const price = latestPrices.find(p => p?.crypto_id === balance.crypto_id);
+                    const crypto = cryptocurrencies.find(c => c.id === balance.CryptoId);
+                    const price = latestPrices.find(p => p?.CryptoId === balance.CryptoId);
 
                     if (crypto && price) {
                         const balanceValueUSD = balance.balance * price.price_usd;

@@ -19,7 +19,7 @@ export const PricesProvider = ({ children }) => {
 
             // Organize the prices by crypto_id
             const organizedPrices = missingIds.reduce((acc, id) => {
-                acc[id] = pricesData.filter(price => price.crypto_id === id);
+                acc[id] = pricesData.filter(price => price.CryptoId === id);
                 return acc;
             }, {});
 

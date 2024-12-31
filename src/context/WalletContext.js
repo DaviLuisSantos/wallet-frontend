@@ -24,8 +24,8 @@ export const WalletProvider = ({ children }) => {
 
             const response = await getWallet();
             const formattedData = response.map(wallet => ({
-                crypto_id: wallet.crypto_id,
-                balance: wallet.balance,
+                CryptoId: wallet.cryptoId,
+                Amount: wallet.amount,
             }));
 
             setWallets(formattedData);
