@@ -1,90 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import CryptoLineChart from '../components/CryptoLineChart';
 import ChartComponent from '../components/Chart';
 import CryptoCard from '../components/CryptoCard';
 import { useCryptocurrencies } from '../context/CryptocurrenciesContext';
 import { useWallets } from '../context/WalletContext';
 import { usePrices } from '../context/PricesContext';
-
-
-const lineData24h = {
-    labels: [
-        '0h', '1h', '2h', '3h', '4h', '5h', '6h', '7h', '8h', '9h', '10h', '11h',
-        '12h', '13h', '14h', '15h', '16h', '17h', '18h', '19h', '20h', '21h', '22h', '23h', '24h'
-    ],
-    datasets: [
-        {
-            label: '24h Dataset',
-            data: [
-                100, 95, 120, 110, 130, 115, 140, 125, 160, 150,
-                130, 170, 180, 160, 190, 170, 200, 180, 210, 190,
-                220, 200, 230, 210, 220
-            ],
-            borderColor: 'rgba(75, 192, 192, 1)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            tension: 0.2,
-        },
-    ],
-};
-
-
-const lineData7d = {
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    datasets: [
-        {
-            label: '7d Dataset',
-            data: [200, 250, 220, 280, 240, 260, 230],
-            borderColor: 'rgba(75, 192, 192, 1)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            tension: 0,
-        },
-    ],
-};
-
-const lineData30d = {
-    labels: Array.from({ length: 30 }, (_, i) => `Day ${i + 1}`),
-    datasets: [
-        {
-            label: '30d Dataset',
-            data: Array.from({ length: 30 }, () => Math.floor(Math.random() * 200 + 100)),
-            borderColor: 'rgba(75, 192, 192, 1)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            tension: 0,
-        },
-    ],
-};
-
-const lineDataAll = {
-    labels: [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ],
-    datasets: [
-        {
-            label: 'All Dataset',
-            data: [
-                100, 150, 120, 180, 140, 160, 130, 170, 110, 190, 115, 175,
-                105, 165, 125, 185, 135, 155, 145, 195, 140, 150, 130, 180
-            ],
-            borderColor: 'rgba(75, 192, 192, 1)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            tension: 0,
-        },
-    ],
-};
-
-const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: {
-            position: 'top',
-        },
-        title: {
-            display: true,
-            text: 'Dynamic Chart Example',
-        },
-    },
-};
 
 const Dashboard = () => {
     const { cryptocurrencies, fetchCryptocurrencies } = useCryptocurrencies();
@@ -93,6 +13,8 @@ const Dashboard = () => {
     const [totalValueUSD, setTotalValueUSD] = useState(0);
     const [topGainer, setTopGainer] = useState(null);
     const [topLoser, setTopLoser] = useState(null);
+    const [selectedRange, setSelectedRange] = useState('all');
+    const [aggregatedPrices, setAggregatedPrices] = useState([]);
 
     const [donutData, setDonutData] = useState({
         labels: [],
@@ -110,11 +32,16 @@ const Dashboard = () => {
         const fetchDashboard = async () => {
             try {
                 await fetchWallets();
-                const ids = wallets.map(wallet => wallet.CryptoId);
+                const ids = wallets.map(wallet => wallet.cryptoId);
                 const endTime = new Date().toISOString().split('T')[0]; // Formato yyyy-mm-dd
                 const startTime = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Formato yyyy-mm-dd
+                const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Formato yyyy-mm-dd
 
-                await fetchPrices(ids, startTime, endTime);
+                if (Object.keys(prices).length === 0) {
+                    await fetchPrices(ids, oneDayAgo, endTime);
+                    await fetchPrices(ids, startTime, endTime);
+                }
+
                 await fetchCryptocurrencies(ids);
 
                 if (wallets.length > 0 && Object.keys(prices).length > 0 && cryptocurrencies.length > 0) {
@@ -136,10 +63,10 @@ const Dashboard = () => {
 
                     // Calculate the value of each wallet item
                     const walletValues = wallets.map(wallet => {
-                        const crypto = cryptocurrencies.find(c => c.id === wallet.CryptoId);
-                        const price = prices[wallet.CryptoId]?.[0]; // Get the latest price
+                        const crypto = cryptocurrencies.find(c => c.id === wallet.cryptoId);
+                        const price = prices[wallet.cryptoId]?.[0]; // Get the latest price
                         if (crypto && price) {
-                            const value = wallet.balance * price.price_usd;
+                            const value = wallet.amount * price.priceUsd;
                             return { ...wallet, value, crypto, price };
                         }
                         return null;
@@ -214,8 +141,8 @@ const Dashboard = () => {
                         }, cryptoPrices[0]);
 
                         let priceChange24h = 0;
-                        if (price24hAgo && price24hAgo.price_usd !== 0) {
-                            priceChange24h = ((latestPrice.price_usd - price24hAgo.price_usd) / price24hAgo.price_usd) * 100;
+                        if (price24hAgo && price24hAgo.priceUsd !== 0) {
+                            priceChange24h = ((latestPrice.priceUsd - price24hAgo.priceUsd) / price24hAgo.priceUsd) * 100;
                         }
 
                         return {
@@ -228,11 +155,11 @@ const Dashboard = () => {
                     let accumulatedValueUSD = 0;
 
                     wallets.forEach(balance => {
-                        const crypto = cryptocurrencies.find(c => c.id === balance.CryptoId);
-                        const price = latestPrices.find(p => p?.CryptoId === balance.CryptoId);
+                        const crypto = cryptocurrencies.find(c => c.id === balance.cryptoId);
+                        const price = latestPrices.find(p => p?.cryptoId === balance.cryptoId);
 
                         if (crypto && price) {
-                            const balanceValueUSD = balance.balance * price.price_usd;
+                            const balanceValueUSD = balance.amount * price.priceUsd;
                             accumulatedValueUSD += balanceValueUSD;
                         }
                     });
@@ -243,8 +170,8 @@ const Dashboard = () => {
                     const topGainer = latestPrices.reduce((max, price) => price.priceChange24h > max.priceChange24h ? price : max, latestPrices[0]);
                     const topLoser = latestPrices.reduce((min, price) => price.priceChange24h < min.priceChange24h ? price : min, latestPrices[0]);
 
-                    const topGainerCrypto = cryptocurrencies.find(c => c.id === topGainer.CryptoId);
-                    const topLoserCrypto = cryptocurrencies.find(c => c.id === topLoser.CryptoId);
+                    const topGainerCrypto = cryptocurrencies.find(c => c.id === topGainer.cryptoId);
+                    const topLoserCrypto = cryptocurrencies.find(c => c.id === topLoser.cryptoId);
 
                     setTopGainer({
                         ...topGainer,
@@ -257,6 +184,36 @@ const Dashboard = () => {
                         name: topLoserCrypto?.name,
                         icon: topLoserCrypto?.icon,
                     });
+
+                    // Aggregate prices over time
+                    const aggregatedPrices = [];
+                    const priceMap = {};
+
+                    latestPrices.forEach(price => {
+                        price.allPrices.forEach(p => {
+                            const timestamp = new Date(p.timestamp).toISOString();
+                            if (!priceMap[timestamp]) {
+                                priceMap[timestamp] = 0;
+                            }
+                            priceMap[timestamp] += p.priceUsd;
+                        });
+                    });
+
+                    for (const [timestamp, priceUsd] of Object.entries(priceMap)) {
+                        const totalValue = wallets.reduce((sum, wallet) => {
+                            const cryptoPrices = prices[wallet.cryptoId];
+                            if (!cryptoPrices) return sum;
+
+                            const priceAtTimestamp = cryptoPrices.find(p => new Date(p.timestamp).toISOString() === timestamp);
+                            if (!priceAtTimestamp) return sum;
+
+                            return sum + (priceAtTimestamp.priceUsd * wallet.amount);
+                        }, 0);
+
+                        aggregatedPrices.push({ timestamp, priceUsd: totalValue });
+                    }
+
+                    setAggregatedPrices(aggregatedPrices);
 
                     console.log('Donut chart data:', {
                         labels,
@@ -294,28 +251,6 @@ const Dashboard = () => {
         },
     };
 
-    const [selectedData, setSelectedData] = useState(lineDataAll);
-    const [selectedRange, setSelectedRange] = useState('all');
-
-    const handleTimeRangeChange = (range) => {
-        setSelectedRange(range);
-        switch (range) {
-            case '24h':
-                setSelectedData(lineData24h);
-                break;
-            case '7d':
-                setSelectedData(lineData7d);
-                break;
-            case '30d':
-                setSelectedData(lineData30d);
-                break;
-            case 'all':
-            default:
-                setSelectedData(lineDataAll);
-                break;
-        }
-    };
-
     return (
         <div className="container mx-auto p-4">
             <div className="shadow-custom rounded-lg p-6">
@@ -326,32 +261,32 @@ const Dashboard = () => {
                 <div className="bg-#222531 shadow-custom rounded-lg p-6 h-full" style={{ height: '400px' }}>
                     <div className="flex justify-end space-x-2 mb-4">
                         <button
-                            onClick={() => handleTimeRangeChange('24h')}
+                            onClick={() => setSelectedRange('24h')}
                             className={`px-4 py-2 rounded ${selectedRange === '24h' ? 'bg-gray-800 text-white' : 'bg-gray-600 text-gray-300'}`}
                         >
                             24h
                         </button>
                         <button
-                            onClick={() => handleTimeRangeChange('7d')}
+                            onClick={() => setSelectedRange('7d')}
                             className={`px-4 py-2 rounded ${selectedRange === '7d' ? 'bg-gray-800 text-white' : 'bg-gray-600 text-gray-300'}`}
                         >
                             7d
                         </button>
                         <button
-                            onClick={() => handleTimeRangeChange('30d')}
+                            onClick={() => setSelectedRange('30d')}
                             className={`px-4 py-2 rounded ${selectedRange === '30d' ? 'bg-gray-800 text-white' : 'bg-gray-600 text-gray-300'}`}
                         >
                             30d
                         </button>
                         <button
-                            onClick={() => handleTimeRangeChange('all')}
+                            onClick={() => setSelectedRange('all')}
                             className={`px-4 py-2 rounded ${selectedRange === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-600 text-gray-300'}`}
                         >
                             All
                         </button>
                     </div>
                     <div className="h-full">
-                        <ChartComponent type="line" data={selectedData} options={options} />
+                        <CryptoLineChart name="Total Value" latestPrices={aggregatedPrices} selectedRange={selectedRange} />
                     </div>
                 </div>
                 <div className="bg-#222531 shadow-custom rounded-lg p-6 h-full" style={{ height: '400px' }}>
@@ -373,7 +308,7 @@ const Dashboard = () => {
                     <h2 className="text-xl font-bold">Recent Transactions</h2>
                     <p className="text-gray-700">Transaction details...</p>
                 </div>
-                <div className=" shadow-custom rounded-lg p-4">
+                <div className="shadow-custom rounded-lg p-4">
                     {topLoser && (
                         <CryptoCard
                             icon={<img src={`data:image/png;base64, ${topLoser.icon}`} alt={`${topLoser.name} icon`} width={64} height={64} />}

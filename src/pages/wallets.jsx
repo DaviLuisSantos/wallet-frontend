@@ -23,8 +23,8 @@ const Wallet = () => {
                 const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Formato yyyy-mm-dd
 
                 if (Object.keys(prices).length === 0) {
-                    await fetchPrices(ids, startTime, endTime);
                     await fetchPrices(ids, oneDayAgo, endTime);
+                    await fetchPrices(ids, startTime, endTime);
                 }
 
                 if (cryptocurrencies.length === 0) await fetchCryptocurrencies(ids);

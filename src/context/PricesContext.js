@@ -4,20 +4,17 @@ import { getPricesId } from '../api/PriceService';
 const PricesContext = createContext();
 
 export const PricesProvider = ({ children }) => {
-    const [prices, setPrices] = useState({});
+    const [prices, setPrices] = useState(() => {
+        const savedPrices = typeof window !== 'undefined' ? localStorage.getItem('prices') : null;
+        return savedPrices ? JSON.parse(savedPrices) : {};
+    });
 
     const fetchPrices = useCallback(async (ids, startTime, endTime) => {
         try {
-            // Check if prices for the given IDs are already available
-            const missingIds = ids.filter(id => !prices[id] || prices[id].length === 0);
-            if (missingIds.length === 0) {
-                console.log('Prices already fetched for all IDs');
-                return;
-            }
+            if (!ids || ids.length === 0) return;
+            const pricesData = await getPricesId(ids, startTime, endTime);
 
-            const pricesData = await getPricesId(missingIds, startTime, endTime);
-
-            // Organize the prices by crypto_id
+            // Organize prices by crypto_id
             const organizedPrices = pricesData.reduce((acc, price) => {
                 if (!acc[price.cryptoId]) {
                     acc[price.cryptoId] = [];
@@ -26,15 +23,31 @@ export const PricesProvider = ({ children }) => {
                 return acc;
             }, {});
 
-            setPrices(prevPrices => ({
-                ...prevPrices,
-                ...organizedPrices,
-            }));
-            console.log('Prices fetched and organized by crypto_id');
+            // Update state functionally to avoid stale state issues
+            setPrices((prevPrices) => {
+                const updatedPrices = {
+                    ...prevPrices,
+                    ...Object.keys(organizedPrices).reduce((acc, key) => {
+                        acc[key] = [...(prevPrices[key] || []), ...organizedPrices[key]];
+                        return acc;
+                    }, {}),
+                };
+
+                /*
+                // Save updated prices to local storage
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem('prices', JSON.stringify(updatedPrices));
+                }
+                */
+
+                return updatedPrices;
+            });
+
+            console.log('Prices fetched and updated successfully');
         } catch (error) {
             console.error('Erro ao buscar preços:', error);
         }
-    }, [prices]);
+    }, []);
 
     return (
         <PricesContext.Provider value={{ prices, fetchPrices }}>
