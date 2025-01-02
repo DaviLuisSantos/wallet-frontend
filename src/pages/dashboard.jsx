@@ -111,7 +111,10 @@ const Dashboard = () => {
             try {
                 await fetchWallets();
                 const ids = wallets.map(wallet => wallet.CryptoId);
-                await fetchPrices(ids);
+                const endTime = new Date().toISOString().split('T')[0]; // Formato yyyy-mm-dd
+                const startTime = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Formato yyyy-mm-dd
+
+                await fetchPrices(ids, startTime, endTime);
                 await fetchCryptocurrencies(ids);
 
                 if (wallets.length > 0 && Object.keys(prices).length > 0 && cryptocurrencies.length > 0) {

@@ -14,12 +14,18 @@ const Wallet = () => {
     useEffect(() => {
         const fetchCryptoItems = async () => {
             try {
-
                 if (wallets.length === 0) await fetchWallets();
 
-                const ids = wallets.map(wallet => wallet.CryptoId);
+                const ids = wallets.map(wallet => wallet.cryptoId);
 
-                if (prices.length === 0) await fetchPrices(ids);
+                const endTime = new Date().toISOString().split('T')[0]; // Formato yyyy-mm-dd
+                const startTime = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Formato yyyy-mm-dd
+                const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Formato yyyy-mm-dd
+
+                if (Object.keys(prices).length === 0) {
+                    await fetchPrices(ids, startTime, endTime);
+                    await fetchPrices(ids, oneDayAgo, endTime);
+                }
 
                 if (cryptocurrencies.length === 0) await fetchCryptocurrencies(ids);
 
@@ -54,8 +60,8 @@ const Wallet = () => {
                     }, cryptoPrices[0]);
 
                     let priceChange24h = 0;
-                    if (price24hAgo && price24hAgo.price_usd !== 0) {
-                        priceChange24h = ((latestPrice.price_usd - price24hAgo.price_usd) / price24hAgo.price_usd) * 100;
+                    if (price24hAgo && price24hAgo.priceUsd !== 0) {
+                        priceChange24h = ((latestPrice.priceUsd - price24hAgo.priceUsd) / price24hAgo.priceUsd) * 100;
                     }
 
                     return {
@@ -64,23 +70,24 @@ const Wallet = () => {
                         allPrices: cryptoPrices // Include all prices for the crypto
                     };
                 }).filter(price => price !== null);
+
                 let totalValueUSD = 0;
                 const cryptoItems = [];
 
                 wallets.forEach(balance => {
-                    const crypto = cryptocurrencies.find(c => c.id === balance.CryptoId);
-                    const price = latestPrices.find(p => p?.CryptoId === balance.CryptoId);
+                    const crypto = cryptocurrencies.find(c => c.id === balance.cryptoId);
+                    const price = latestPrices.find(p => p?.cryptoId === balance.cryptoId);
 
                     if (crypto && price) {
-                        const balanceValueUSD = balance.balance * price.price_usd;
+                        const balanceValueUSD = balance.amount * price.priceUsd;
                         totalValueUSD += balanceValueUSD;
 
                         cryptoItems.push({
                             name: crypto.name,
                             symbol: crypto.symbol,
-                            balance: balance.balance,
+                            balance: balance.amount,
                             value: balanceValueUSD.toFixed(2),
-                            priceUSD: price.price_usd,
+                            priceUSD: price.priceUsd,
                             icon: crypto.icon,
                             variation: price.priceChange24h.toFixed(2),
                             latestPrices: price.allPrices // Pass all prices for the crypto

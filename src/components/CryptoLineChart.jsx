@@ -53,7 +53,7 @@ const CryptoLineChart = ({ name, latestPrices, selectedRange }) => {
         datasets: [
             {
                 label: `${name} Price (USD)`,
-                data: sortedPrices.map(price => price.price_usd),
+                data: sortedPrices.map(price => price.priceUsd),
                 borderColor: 'rgba(75, 192, 192, 1)',
                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
                 tension: 0.2,
@@ -63,7 +63,7 @@ const CryptoLineChart = ({ name, latestPrices, selectedRange }) => {
     };
 
     // Calculate Fibonacci retracement levels
-    const prices = sortedPrices.map(price => price.price_usd);
+    const prices = sortedPrices.map(price => price.priceUsd);
     const maxPrice = Math.max(...prices);
     const minPrice = Math.min(...prices);
     const diff = maxPrice - minPrice;

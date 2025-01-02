@@ -6,7 +6,7 @@ const PricesContext = createContext();
 export const PricesProvider = ({ children }) => {
     const [prices, setPrices] = useState({});
 
-    const fetchPrices = useCallback(async (ids) => {
+    const fetchPrices = useCallback(async (ids, startTime, endTime) => {
         try {
             // Check if prices for the given IDs are already available
             const missingIds = ids.filter(id => !prices[id] || prices[id].length === 0);
@@ -15,11 +15,14 @@ export const PricesProvider = ({ children }) => {
                 return;
             }
 
-            const pricesData = await getPricesId(missingIds);
+            const pricesData = await getPricesId(missingIds, startTime, endTime);
 
             // Organize the prices by crypto_id
-            const organizedPrices = missingIds.reduce((acc, id) => {
-                acc[id] = pricesData.filter(price => price.CryptoId === id);
+            const organizedPrices = pricesData.reduce((acc, price) => {
+                if (!acc[price.cryptoId]) {
+                    acc[price.cryptoId] = [];
+                }
+                acc[price.cryptoId].push(price);
                 return acc;
             }, {});
 

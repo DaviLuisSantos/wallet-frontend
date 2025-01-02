@@ -39,7 +39,7 @@ const CryptoList = ({ items }) => {
         <div className="flex flex-col gap-4">
             <div className="grid grid-cols-5 gap-4 mb-4 text-teal-400">
                 <button onClick={() => handleSort('name')} className="text-left">Nome</button>
-                <button onClick={() => handleSort('priceUSD')} className="text-left">Quantia</button>
+                <button onClick={() => handleSort('priceUsd')} className="text-left">Quantia</button>
                 <button onClick={() => handleSort('balance')} className="text-left">Preço</button>
                 <button onClick={() => handleSort('value')} className="text-left">Valor</button>
                 <button onClick={() => handleSort('variation')} className="text-left">Variação 24h</button>
