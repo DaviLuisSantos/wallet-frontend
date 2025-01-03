@@ -5,6 +5,8 @@ import CryptoCard from '../components/CryptoCard';
 import { useCryptocurrencies } from '../context/CryptocurrenciesContext';
 import { useWallets } from '../context/WalletContext';
 import { usePrices } from '../context/PricesContext';
+import { calculatePriceChange, findTopGainer, findTopLoser } from '../utils/priceUtils';
+import { symbol } from 'prop-types';
 
 const Dashboard = () => {
     const { cryptocurrencies, fetchCryptocurrencies } = useCryptocurrencies();
@@ -15,6 +17,7 @@ const Dashboard = () => {
     const [topLoser, setTopLoser] = useState(null);
     const [selectedRange, setSelectedRange] = useState('all');
     const [aggregatedPrices, setAggregatedPrices] = useState([]);
+    const [top3Cryptos, setTop3Cryptos] = useState([]);
 
     const [donutData, setDonutData] = useState({
         labels: [],
@@ -114,42 +117,7 @@ const Dashboard = () => {
                         const cryptoPrices = prices[id];
                         if (!cryptoPrices || cryptoPrices.length === 0) return null;
 
-                        const latestPrice = cryptoPrices.reduce((latest, current) => {
-                            return new Date(latest.timestamp) > new Date(current.timestamp) ? latest : current;
-                        }, cryptoPrices[0]);
-
-                        const price24hAgo = cryptoPrices.reduce((closest, current) => {
-                            const currentTime = new Date(current.timestamp);
-                            const closestTime = new Date(closest.timestamp);
-                            const latestTime = new Date(latestPrice.timestamp);
-
-                            // Calcular a diferença de tempo em relação a 24 horas atrás
-                            const targetTime = new Date(latestTime.getTime() - 24 * 60 * 60 * 1000);
-                            const timeDiffCurrent = Math.abs(currentTime - targetTime);
-                            const timeDiffClosest = Math.abs(closestTime - targetTime);
-
-                            // Verificar se o item atual está no intervalo de 24 horas atrás
-                            const isCurrentValid = currentTime <= latestTime && currentTime >= targetTime;
-                            const isClosestValid = closestTime <= latestTime && closestTime >= targetTime;
-
-                            // Atualizar o mais próximo com base na validade e na diferença de tempo
-                            if (isCurrentValid && (!isClosestValid || timeDiffCurrent < timeDiffClosest)) {
-                                return current;
-                            }
-
-                            return closest;
-                        }, cryptoPrices[0]);
-
-                        let priceChange24h = 0;
-                        if (price24hAgo && price24hAgo.priceUsd !== 0) {
-                            priceChange24h = ((latestPrice.priceUsd - price24hAgo.priceUsd) / price24hAgo.priceUsd) * 100;
-                        }
-
-                        return {
-                            ...latestPrice,
-                            priceChange24h,
-                            allPrices: cryptoPrices // Include all prices for the crypto
-                        };
+                        return calculatePriceChange(cryptoPrices);
                     }).filter(price => price !== null);
 
                     let accumulatedValueUSD = 0;
@@ -166,9 +134,54 @@ const Dashboard = () => {
 
                     setTotalValueUSD(accumulatedValueUSD.toFixed(2));
 
-                    // Find the top gainer and top loser
-                    const topGainer = latestPrices.reduce((max, price) => price.priceChange24h > max.priceChange24h ? price : max, latestPrices[0]);
-                    const topLoser = latestPrices.reduce((min, price) => price.priceChange24h < min.priceChange24h ? price : min, latestPrices[0]);
+                    const top3 = walletValues.slice(0, 3);
+                    const top3Ids = top3.map(item => item.crypto.id);
+
+                    const latestPricesTop3 = top3Ids.map(id => {
+                        const cryptoPrices = prices[id];
+                        if (!cryptoPrices || cryptoPrices.length === 0) return null;
+
+                        // Filtrar preços das últimas 24 horas
+                        const now = new Date();
+                        const startOfDayYesterday = new Date(now);
+                        startOfDayYesterday.setDate(now.getDate() - 1);
+                        //startOfDayYesterday.setHours(0, 0, 0, 0);
+
+                        const pricesLast24h = cryptoPrices.filter(p => {
+                            const priceTime = new Date(p.timestamp);
+                            return priceTime >= startOfDayYesterday && priceTime <= now;
+                        });
+
+                        // Agrupar por hora e pegar o último preço de cada hora
+                        const pricesByHour = pricesLast24h.reduce((acc, price) => {
+                            const hour = new Date(price.timestamp).getHours();
+                            acc[hour] = price;
+                            return acc;
+                        }, {});
+
+                        const hourlyPrices = Object.values(pricesByHour);
+
+                        return calculatePriceChange(hourlyPrices);
+                    }).filter(price => price !== null);
+
+                    const top3Cryptos = latestPricesTop3.map(price => {
+                        const crypto = cryptocurrencies.find(c => c.id === price.cryptoId);
+                        return {
+                            ...price,
+                            name: crypto?.name,
+                            symbol: crypto?.symbol,
+                            icon: crypto?.icon,
+                            sparklineData: price.allPrices.map(p => p.priceUsd),
+                            lastValue: price.priceUsd,
+                        };
+                    });
+
+                    setTop3Cryptos(top3Cryptos);
+
+
+                    // Use the functions to find the top gainer and top loser
+                    const topGainer = findTopGainer(latestPrices);
+                    const topLoser = findTopLoser(latestPrices);
 
                     const topGainerCrypto = cryptocurrencies.find(c => c.id === topGainer.cryptoId);
                     const topLoserCrypto = cryptocurrencies.find(c => c.id === topLoser.cryptoId);
@@ -177,12 +190,17 @@ const Dashboard = () => {
                         ...topGainer,
                         name: topGainerCrypto?.name,
                         icon: topGainerCrypto?.icon,
+                        sparklineData: topGainer.allPrices.map(p => p.priceUsd),
+                        lastValue: topGainer.priceUsd,
                     });
 
                     setTopLoser({
                         ...topLoser,
                         name: topLoserCrypto?.name,
+                        symbol: topLoserCrypto?.symbol,
                         icon: topLoserCrypto?.icon,
+                        sparklineData: topLoser.allPrices.map(p => p.priceUsd),
+                        lastValue: topLoser.priceUsd,
                     });
 
                     // Aggregate prices over time
@@ -253,9 +271,67 @@ const Dashboard = () => {
 
     return (
         <div className="container mx-auto p-4">
-            <div className="shadow-custom rounded-lg p-6">
-                <h2 className="text-xl text-gray-700">Total Balance</h2>
-                <p className="text-4xl font-bold">{totalValueUSD}</p>
+            <div className="bg-gray-900 text-white p-6 rounded-xl shadow-lg w-full flex justify-between items-center">
+                {/* Left Section: Total Balance */}
+                <div>
+                    <h2 className="text-sm text-gray-400 uppercase">Total Balance</h2>
+                    <p className="text-4xl font-bold">
+                        ${String(totalValueUSD).split('.')[0]}
+                        <span className="text-2xl align-middle ">.{String(totalValueUSD).split('.')[1]}</span>
+                    </p>
+                </div>
+
+                {/* Right Section: Variations */}
+                <div className="flex space-x-8">
+                    <div className="text-right">
+                        <h3 className="text-sm text-gray-400">Today</h3>
+                        <p className="text-sm text-orange-400 flex items-center">
+                            -2.5% <span className="ml-1 text-xl">&#8595;</span>
+                        </p>
+                    </div>
+                    <div className="text-right">
+                        <h3 className="text-sm text-gray-400">7 Days</h3>
+                        <p className="text-sm text-green-400 flex items-center">
+                            +4.25% <span className="ml-1 text-xl">&#8593;</span>
+                        </p>
+                    </div>
+                    <div className="text-right">
+                        <h3 className="text-sm text-gray-400">30 Days</h3>
+                        <p className="text-sm text-green-400 flex items-center">
+                            +11.5% <span className="ml-1 text-xl">&#8593;</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+                {top3Cryptos.map((crypto, index) => (
+                    <div key={index}>
+                        <CryptoCard
+                            icon={crypto.icon}
+                            name={crypto.name}
+                            symbol={crypto.symbol}
+                            variation={crypto.priceChange24h}
+                            lastValue={crypto.lastValue}
+                            sparklineData={crypto.sparklineData}
+                        />
+                    </div>
+                ))}
+
+                <div >
+                    {topLoser && (
+                        <CryptoCard
+                            icon={topLoser.icon}
+                            name={topLoser.name}
+                            symbol={topLoser.symbol}
+                            variation={topLoser.priceChange24h}
+                            lastValue={topLoser.lastValue}
+                            sparklineData={topLoser.sparklineData}
+                        />
+                    )}
+                </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
                 <div className="bg-#222531 shadow-custom rounded-lg p-6 h-full" style={{ height: '400px' }}>
@@ -295,28 +371,7 @@ const Dashboard = () => {
                     </div>
                 </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                <div className="shadow-custom rounded-lg p-4">
-                    {topGainer && (
-                        <CryptoCard
-                            icon={<img src={`data:image/png;base64, ${topGainer.icon}`} alt={`${topGainer.name} icon`} width={64} height={64} />}
-                            variation={topGainer.priceChange24h}
-                        />
-                    )}
-                </div>
-                <div className="bg-gradient-to-t from-gray-100 to-gray-500 shadow-custom rounded-lg p-4">
-                    <h2 className="text-xl font-bold">Recent Transactions</h2>
-                    <p className="text-gray-700">Transaction details...</p>
-                </div>
-                <div className="shadow-custom rounded-lg p-4">
-                    {topLoser && (
-                        <CryptoCard
-                            icon={<img src={`data:image/png;base64, ${topLoser.icon}`} alt={`${topLoser.name} icon`} width={64} height={64} />}
-                            variation={topLoser.priceChange24h}
-                        />
-                    )}
-                </div>
-            </div>
+
             <div className="mt-4">
                 <div className="bg-gradient-to-t from-gray-100 to-gray-500 shadow-custom rounded-lg p-4">
                     <h2 className="text-xl font-bold">Portfolio Overview</h2>

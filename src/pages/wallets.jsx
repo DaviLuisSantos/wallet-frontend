@@ -3,6 +3,7 @@ import CryptoList from '../components/CryptoList';
 import { useCryptocurrencies } from '../context/CryptocurrenciesContext';
 import { useWallets } from '../context/WalletContext';
 import { usePrices } from '../context/PricesContext';
+import { calculatePriceChange } from '../utils/priceUtils';
 
 const Wallet = () => {
     const [cryptoItems, setCryptoItems] = useState([]);
@@ -18,9 +19,9 @@ const Wallet = () => {
 
                 const ids = wallets.map(wallet => wallet.cryptoId);
 
-                const endTime = new Date().toISOString().split('T')[0]; // Formato yyyy-mm-dd
-                const startTime = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Formato yyyy-mm-dd
-                const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Formato yyyy-mm-dd
+                const endTime = new Date().toISOString().split('T')[0];
+                const startTime = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
                 if (Object.keys(prices).length === 0) {
                     await fetchPrices(ids, oneDayAgo, endTime);
@@ -29,47 +30,9 @@ const Wallet = () => {
 
                 if (cryptocurrencies.length === 0) await fetchCryptocurrencies(ids);
 
-                const latestPrices = ids.map(id => {
-                    const cryptoPrices = prices[id];
-                    if (!cryptoPrices || cryptoPrices.length === 0) return null;
-
-                    const latestPrice = cryptoPrices.reduce((latest, current) => {
-                        return new Date(latest.timestamp) > new Date(current.timestamp) ? latest : current;
-                    }, cryptoPrices[0]);
-
-                    const price24hAgo = cryptoPrices.reduce((closest, current) => {
-                        const currentTime = new Date(current.timestamp);
-                        const closestTime = new Date(closest.timestamp);
-                        const latestTime = new Date(latestPrice.timestamp);
-
-                        // Calcular a diferença de tempo em relação a 24 horas atrás
-                        const targetTime = new Date(latestTime.getTime() - 24 * 60 * 60 * 1000);
-                        const timeDiffCurrent = Math.abs(currentTime - targetTime);
-                        const timeDiffClosest = Math.abs(closestTime - targetTime);
-
-                        // Verificar se o item atual está no intervalo de 24 horas atrás
-                        const isCurrentValid = currentTime <= latestTime && currentTime >= targetTime;
-                        const isClosestValid = closestTime <= latestTime && closestTime >= targetTime;
-
-                        // Atualizar o mais próximo com base na validade e na diferença de tempo
-                        if (isCurrentValid && (!isClosestValid || timeDiffCurrent < timeDiffClosest)) {
-                            return current;
-                        }
-
-                        return closest;
-                    }, cryptoPrices[0]);
-
-                    let priceChange24h = 0;
-                    if (price24hAgo && price24hAgo.priceUsd !== 0) {
-                        priceChange24h = ((latestPrice.priceUsd - price24hAgo.priceUsd) / price24hAgo.priceUsd) * 100;
-                    }
-
-                    return {
-                        ...latestPrice,
-                        priceChange24h,
-                        allPrices: cryptoPrices // Include all prices for the crypto
-                    };
-                }).filter(price => price !== null);
+                const latestPrices = ids
+                    .map(id => calculatePriceChange(prices[id]))
+                    .filter(price => price !== null);
 
                 let totalValueUSD = 0;
                 const cryptoItems = [];
@@ -90,7 +53,7 @@ const Wallet = () => {
                             priceUSD: price.priceUsd,
                             icon: crypto.icon,
                             variation: price.priceChange24h.toFixed(2),
-                            latestPrices: price.allPrices // Pass all prices for the crypto
+                            latestPrices: price.allPrices,
                         });
                     }
                 });
