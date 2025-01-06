@@ -10,16 +10,16 @@ function MyApp({ Component, pageProps }) {
     <WalletProvider>
       <CryptocurrenciesProvider>
         <PricesProvider>
-          <div className="flex flex-col h-screen">
-            {/* Navbar */}
-            <Navbar />
-
-            <div className="flex flex-1">
-              {/* Sidebar */}
+          <div className="flex h-screen">
+            {/* Sidebar */}
+            <aside className="w-64 bg-gray-900 text-white">
               <Sidebar />
+            </aside>
+            {/* Main Content */}
+            <div className="flex-1 flex flex-col">
 
-              {/* Conteúdo Principal */}
-              <main className="flex-1 p-6 ml-64 mt-16">
+              {/* Page Content */}
+              <main className="flex-1 overflow-y-auto">
                 <Component {...pageProps} />
               </main>
             </div>

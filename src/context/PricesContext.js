@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useCallback } from 'react';
-import { getPricesId } from '../api/PriceService';
+import { getPricesId, getPriceIds } from '../api/PriceService';
 
 const PricesContext = createContext();
 
@@ -9,36 +9,46 @@ export const PricesProvider = ({ children }) => {
         return savedPrices ? JSON.parse(savedPrices) : {};
     });
 
+    const [latestPrices, setLatestPrices] = useState([]);
+
     const fetchPrices = useCallback(async (ids, startTime, endTime) => {
         try {
             if (!ids || ids.length === 0) return;
+
             const pricesData = await getPricesId(ids, startTime, endTime);
 
-            // Organize prices by crypto_id
+            // Organizar preços por cryptoId, garantindo que não haja duplicatas
             const organizedPrices = pricesData.reduce((acc, price) => {
                 if (!acc[price.cryptoId]) {
-                    acc[price.cryptoId] = [];
+                    acc[price.cryptoId] = {};
                 }
-                acc[price.cryptoId].push(price);
+
+                // Garante que cada `timestamp` seja único para o mesmo `cryptoId`
+                acc[price.cryptoId][price.timestamp] = price;
+
                 return acc;
             }, {});
 
-            // Update state functionally to avoid stale state issues
+            // Atualizar estado evitando duplicatas
             setPrices((prevPrices) => {
-                const updatedPrices = {
-                    ...prevPrices,
-                    ...Object.keys(organizedPrices).reduce((acc, key) => {
-                        acc[key] = [...(prevPrices[key] || []), ...organizedPrices[key]];
-                        return acc;
-                    }, {}),
-                };
+                const updatedPrices = { ...prevPrices };
 
-                /*
-                // Save updated prices to local storage
-                if (typeof window !== 'undefined') {
-                    localStorage.setItem('prices', JSON.stringify(updatedPrices));
+                for (const cryptoId in organizedPrices) {
+                    if (!updatedPrices[cryptoId]) {
+                        updatedPrices[cryptoId] = [];
+                    }
+
+                    const uniquePrices = Object.values(organizedPrices[cryptoId]); // Remove duplicatas por timestamp
+
+                    // Adiciona preços únicos ao estado
+                    updatedPrices[cryptoId] = [
+                        ...updatedPrices[cryptoId].filter(
+                            (price) =>
+                                !uniquePrices.some((newPrice) => newPrice.timestamp === price.timestamp)
+                        ),
+                        ...uniquePrices,
+                    ];
                 }
-                */
 
                 return updatedPrices;
             });
@@ -49,8 +59,27 @@ export const PricesProvider = ({ children }) => {
         }
     }, []);
 
+    const fetchLatestPrices = useCallback(async (ids) => {
+        try {
+            if (!ids || ids.length === 0) return;
+
+            const pricesData = await getPriceIds(ids);
+
+            // Organizar os preços mais recentes, garantindo que não haja duplicatas
+            const uniqueLatestPrices = ids.map((id) => {
+                const latestPrice = pricesData.find((price) => price.cryptoId === id);
+                return latestPrice || null;
+            }).filter(Boolean);
+
+            setLatestPrices(uniqueLatestPrices);
+            console.log('Latest prices fetched and updated successfully');
+        } catch (error) {
+            console.error('Erro ao buscar os últimos preços:', error);
+        }
+    }, []);
+
     return (
-        <PricesContext.Provider value={{ prices, fetchPrices }}>
+        <PricesContext.Provider value={{ prices, fetchPrices, latestPrices, fetchLatestPrices }}>
             {children}
         </PricesContext.Provider>
     );

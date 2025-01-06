@@ -16,16 +16,13 @@ const CryptoList = ({ items }) => {
     };
 
     const sortedItems = [...items].sort((a, b) => {
-        // Tentar converter os valores para números
         const aValue = Number(a[sortKey]);
         const bValue = Number(b[sortKey]);
 
-        // Se ambos forem números válidos, fazer a comparação numérica
         if (!isNaN(aValue) && !isNaN(bValue)) {
             return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
         }
 
-        // Caso contrário, ordenar alfabeticamente (para strings)
         const aString = String(a[sortKey]);
         const bString = String(b[sortKey]);
         return sortOrder === 'asc'
@@ -33,10 +30,9 @@ const CryptoList = ({ items }) => {
             : bString.localeCompare(aString);
     });
 
-
-
     return (
         <div className="flex flex-col gap-4">
+            {/* Header com botões de ordenação */}
             <div className="grid grid-cols-5 gap-4 mb-4 text-teal-400">
                 <button onClick={() => handleSort('name')} className="text-left">Nome</button>
                 <button onClick={() => handleSort('priceUsd')} className="text-left">Quantia</button>
@@ -44,19 +40,23 @@ const CryptoList = ({ items }) => {
                 <button onClick={() => handleSort('value')} className="text-left">Valor</button>
                 <button onClick={() => handleSort('variation')} className="text-left">Variação 24h</button>
             </div>
-            {sortedItems.map((item, index) => (
-                <CryptoItem
-                    key={index}
-                    icon={item.icon}
-                    symbol={item.symbol}
-                    name={item.name}
-                    priceUSD={item.priceUSD}
-                    balance={item.balance}
-                    value={item.value}
-                    variation={item.variation}
-                    latestPrices={item.latestPrices}
-                />
-            ))}
+
+            {/* Lista rolável */}
+            <div className="flex flex-col gap-4 max-h-[40rem] overflow-y-auto no-scrollbar">
+                {sortedItems.map((item, index) => (
+                    <CryptoItem
+                        key={index}
+                        icon={item.icon}
+                        symbol={item.symbol}
+                        name={item.name}
+                        priceUSD={item.priceUSD}
+                        balance={item.balance}
+                        value={item.value}
+                        variation={item.variation}
+                        latestPrices={item.latestPrices}
+                    />
+                ))}
+            </div>
         </div>
     );
 };

@@ -5,19 +5,21 @@ import CryptoCard from '../components/CryptoCard';
 import { useCryptocurrencies } from '../context/CryptocurrenciesContext';
 import { useWallets } from '../context/WalletContext';
 import { usePrices } from '../context/PricesContext';
-import { calculatePriceChange, findTopGainer, findTopLoser } from '../utils/priceUtils';
-import { symbol } from 'prop-types';
+import { calculatePriceChange, findTopGainer, findTopLoser, calculateWalletValues } from '../utils/priceUtils';
+import { fetchData } from '../utils/fetchData';
+import { generateChartData } from '../utils/chartUtils';
 
 const Dashboard = () => {
     const { cryptocurrencies, fetchCryptocurrencies } = useCryptocurrencies();
     const { wallets, fetchWallets } = useWallets();
-    const { prices, fetchPrices } = usePrices();
+    const { prices, fetchPrices, latestPrices, fetchLatestPrices } = usePrices();
     const [totalValueUSD, setTotalValueUSD] = useState(0);
     const [topGainer, setTopGainer] = useState(null);
     const [topLoser, setTopLoser] = useState(null);
     const [selectedRange, setSelectedRange] = useState('all');
     const [aggregatedPrices, setAggregatedPrices] = useState([]);
     const [top3Cryptos, setTop3Cryptos] = useState([]);
+    const [variations, setVariation24h] = useState({ variation24h: 0, variation7d: 0, variation30d: 0 });
 
     const [donutData, setDonutData] = useState({
         labels: [],
@@ -34,90 +36,59 @@ const Dashboard = () => {
     useEffect(() => {
         const fetchDashboard = async () => {
             try {
-                await fetchWallets();
-                const ids = wallets.map(wallet => wallet.cryptoId);
-                const endTime = new Date().toISOString().split('T')[0]; // Formato yyyy-mm-dd
-                const startTime = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Formato yyyy-mm-dd
-                const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Formato yyyy-mm-dd
 
-                if (Object.keys(prices).length === 0) {
-                    await fetchPrices(ids, oneDayAgo, endTime);
-                    await fetchPrices(ids, startTime, endTime);
-                }
+                await fetchData(wallets, prices, latestPrices, cryptocurrencies, fetchWallets, fetchPrices, fetchLatestPrices, fetchCryptocurrencies);
 
-                await fetchCryptocurrencies(ids);
+                let colorIndex = 0;
+                if (!wallets || !prices || !cryptocurrencies) return;
+                const { walletValues, totalValue, top6, others } = calculateWalletValues(wallets, cryptocurrencies, prices);
 
                 if (wallets.length > 0 && Object.keys(prices).length > 0 && cryptocurrencies.length > 0) {
-                    const labels = [];
-                    const data = [];
-                    const backgroundColor = [];
-                    const borderColor = [];
 
-                    const colors = [
-                        'rgba(255, 99, 132, 0.2)', 'rgba(54, 162, 235, 0.2)',
-                        'rgba(255, 206, 86, 0.2)', 'rgba(75, 192, 192, 0.2)',
-                        'rgba(153, 102, 255, 0.2)', 'rgba(255, 159, 64, 0.2)',
-                        'rgba(201, 203, 207, 0.2)', 'rgba(255, 99, 132, 0.2)',
-                    ];
+                    setDonutData(generateChartData(wallets, prices, cryptocurrencies, top6, others, totalValue));
 
-                    const borderColors = colors.map((c) => c.replace('0.2', '1'));
-
-                    let colorIndex = 0;
-
-                    // Calculate the value of each wallet item
-                    const walletValues = wallets.map(wallet => {
-                        const crypto = cryptocurrencies.find(c => c.id === wallet.cryptoId);
-                        const price = prices[wallet.cryptoId]?.[0]; // Get the latest price
-                        if (crypto && price) {
-                            const value = wallet.amount * price.priceUsd;
-                            return { ...wallet, value, crypto, price };
-                        }
-                        return null;
-                    }).filter(item => item !== null);
-
-                    // Sort by value in descending order
-                    walletValues.sort((a, b) => b.value - a.value);
-
-                    // Calculate the total value
-                    const totalValue = walletValues.reduce((sum, item) => sum + item.value, 0);
-
-                    // Take the top 6 and group the rest as "Others"
-                    const top6 = walletValues.slice(0, 6);
-                    const others = walletValues.slice(6);
-
-                    top6.forEach(item => {
-                        labels.push(item.crypto.name);
-                        data.push((item.value / totalValue * 100).toFixed(2)); // Convert to percentage
-                        backgroundColor.push(colors[colorIndex % colors.length]);
-                        borderColor.push(borderColors[colorIndex % borderColors.length]);
-                        colorIndex++;
-                    });
-
-                    if (others.length > 0) {
-                        const othersValue = others.reduce((sum, item) => sum + item.value, 0);
-                        labels.push('Others');
-                        data.push((othersValue / totalValue * 100).toFixed(2)); // Convert to percentage
-                        backgroundColor.push(colors[colorIndex % colors.length]);
-                        borderColor.push(borderColors[colorIndex % borderColors.length]);
-                    }
-
-                    setDonutData({
-                        labels,
-                        datasets: [
-                            {
-                                label: 'Cryptocurrency Distribution',
-                                data,
-                                backgroundColor,
-                                borderColor,
-                            },
-                        ],
-                    });
+                    const ids = wallets.map(wallet => wallet.cryptoId);
 
                     const latestPrices = ids.map(id => {
                         const cryptoPrices = prices[id];
                         if (!cryptoPrices || cryptoPrices.length === 0) return null;
 
-                        return calculatePriceChange(cryptoPrices);
+                        const latestPrice = cryptoPrices.reduce((latest, current) => {
+                            return new Date(latest.timestamp) > new Date(current.timestamp) ? latest : current;
+                        }, cryptoPrices[0]);
+
+                        const price24hAgo = cryptoPrices.reduce((closest, current) => {
+                            const currentTime = new Date(current.timestamp);
+                            const closestTime = new Date(closest.timestamp);
+                            const latestTime = new Date(latestPrice.timestamp);
+
+                            // Calcular a diferença de tempo em relação a 24 horas atrás
+                            const targetTime = new Date(latestTime.getTime() - 24 * 60 * 60 * 1000);
+                            const timeDiffCurrent = Math.abs(currentTime - targetTime);
+                            const timeDiffClosest = Math.abs(closestTime - targetTime);
+
+                            // Verificar se o item atual está no intervalo de 24 horas atrás
+                            const isCurrentValid = currentTime <= latestTime && currentTime >= targetTime;
+                            const isClosestValid = closestTime <= latestTime && closestTime >= targetTime;
+
+                            // Atualizar o mais próximo com base na validade e na diferença de tempo
+                            if (isCurrentValid && (!isClosestValid || timeDiffCurrent < timeDiffClosest)) {
+                                return current;
+                            }
+
+                            return closest;
+                        }, cryptoPrices[0]);
+
+                        let priceChange = 0;
+                        if (price24hAgo && price24hAgo.priceUsd !== 0) {
+                            priceChange = ((latestPrice.priceUsd - price24hAgo.priceUsd) / price24hAgo.priceUsd) * 100;
+                        }
+
+                        return {
+                            ...latestPrice,
+                            priceChange,
+                            allPrices: cryptoPrices // Include all prices for the crypto
+                        };
                     }).filter(price => price !== null);
 
                     let accumulatedValueUSD = 0;
@@ -168,6 +139,7 @@ const Dashboard = () => {
                         const crypto = cryptocurrencies.find(c => c.id === price.cryptoId);
                         return {
                             ...price,
+                            cryptoId: crypto?.id,
                             name: crypto?.name,
                             symbol: crypto?.symbol,
                             icon: crypto?.icon,
@@ -199,6 +171,7 @@ const Dashboard = () => {
                         name: topLoserCrypto?.name,
                         symbol: topLoserCrypto?.symbol,
                         icon: topLoserCrypto?.icon,
+                        priceChange: topLoser.priceChange,
                         sparklineData: topLoser.allPrices.map(p => p.priceUsd),
                         lastValue: topLoser.priceUsd,
                     });
@@ -233,17 +206,14 @@ const Dashboard = () => {
 
                     setAggregatedPrices(aggregatedPrices);
 
-                    console.log('Donut chart data:', {
-                        labels,
-                        datasets: [
-                            {
-                                label: 'Cryptocurrency Distribution',
-                                data,
-                                backgroundColor,
-                                borderColor,
-                            },
-                        ],
-                    });
+                    const variation24h = calculatePriceChange(aggregatedPrices, 24);
+                    const variation7d = calculatePriceChange(aggregatedPrices, 24 * 7);
+                    const variation30d = calculatePriceChange(aggregatedPrices, 24 * 30);
+
+                    setVariation24h({ variation24h, variation7d, variation30d });
+
+                    console.log(variations);
+
                 } else {
                     console.log('Missing data for donut chart:', { wallets, prices, cryptocurrencies });
                 }
@@ -285,48 +255,47 @@ const Dashboard = () => {
                 <div className="flex space-x-8">
                     <div className="text-right">
                         <h3 className="text-sm text-gray-400">Today</h3>
-                        <p className="text-sm text-orange-400 flex items-center">
-                            -2.5% <span className="ml-1 text-xl">&#8595;</span>
+                        <p className={`text-sm flex items-center ${variations.variation24h.priceChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {variations.variation24h.priceChange?.toFixed(2)}% <span className="ml-1 text-xl">{variations.variation24h.priceChange >= 0 ? '↑' : '↓'}</span>
                         </p>
                     </div>
                     <div className="text-right">
                         <h3 className="text-sm text-gray-400">7 Days</h3>
-                        <p className="text-sm text-green-400 flex items-center">
-                            +4.25% <span className="ml-1 text-xl">&#8593;</span>
+                        <p className={`text-sm flex items-center ${variations.variation7d.priceChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {variations.variation7d.priceChange?.toFixed(2)}% <span className="ml-1 text-xl">{variations.variation7d.priceChange >= 0 ? '↑' : '↓'}</span>
                         </p>
                     </div>
                     <div className="text-right">
                         <h3 className="text-sm text-gray-400">30 Days</h3>
-                        <p className="text-sm text-green-400 flex items-center">
-                            +11.5% <span className="ml-1 text-xl">&#8593;</span>
+                        <p className={`text-sm flex items-center ${variations.variation30d.priceChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {variations.variation30d.priceChange?.toFixed(2)}% <span className="ml-1 text-xl">{variations.variation30d.priceChange >= 0 ? '↑' : '↓'}</span>
                         </p>
                     </div>
                 </div>
             </div>
 
-
-
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
                 {top3Cryptos.map((crypto, index) => (
                     <div key={index}>
                         <CryptoCard
+                            cryptoId={crypto.cryptoId}
                             icon={crypto.icon}
                             name={crypto.name}
                             symbol={crypto.symbol}
-                            variation={crypto.priceChange24h}
+                            variation={crypto.priceChange}
                             lastValue={crypto.lastValue}
                             sparklineData={crypto.sparklineData}
                         />
                     </div>
                 ))}
 
-                <div >
+                <div>
                     {topLoser && (
                         <CryptoCard
                             icon={topLoser.icon}
                             name={topLoser.name}
                             symbol={topLoser.symbol}
-                            variation={topLoser.priceChange24h}
+                            variation={topLoser.priceChange}
                             lastValue={topLoser.lastValue}
                             sparklineData={topLoser.sparklineData}
                         />
@@ -369,14 +338,6 @@ const Dashboard = () => {
                     <div className="h-full">
                         <ChartComponent type="doughnut" data={donutData} options={donutOptions} />
                     </div>
-                </div>
-            </div>
-
-            <div className="mt-4">
-                <div className="bg-gradient-to-t from-gray-100 to-gray-500 shadow-custom rounded-lg p-4">
-                    <h2 className="text-xl font-bold">Portfolio Overview</h2>
-                    <p className="text-gray-700">Portfolio details...</p>
-                    <button className="mt-2 bg-blue-500 text-white px-4 py-2 rounded">View More</button>
                 </div>
             </div>
         </div>
