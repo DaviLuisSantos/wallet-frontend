@@ -60,7 +60,7 @@ const Wallet = () => {
 
     return (
         <div className="flex flex-col items-center h-screen overflow-hidden">
-            <div className="flex flex-col w-full h-full rounded-lg shadow-lg p-6">
+            <div className="flex flex-col w-full h-full rounded-lg shadow-lg p-6 overflow-hidden">
                 <h1 className="text-3xl font-bold mb-4 text-center text-teal-400">
                     Minha Carteira Cripto
                 </h1>
@@ -83,7 +83,6 @@ const Wallet = () => {
             </div>
         </div>
     );
-
 };
 
 export default Wallet;

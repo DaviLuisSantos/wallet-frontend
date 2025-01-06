@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import CryptoItem from './CryptoItem';
 
@@ -7,42 +7,53 @@ const CryptoList = ({ items }) => {
     const [sortOrder, setSortOrder] = useState('asc');
 
     const handleSort = (key) => {
-        if (sortKey === key) {
-            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-        } else {
-            setSortKey(key);
-            setSortOrder('asc');
-        }
+        setSortOrder(sortKey === key && sortOrder === 'asc' ? 'desc' : 'asc');
+        setSortKey(key);
     };
 
-    const sortedItems = [...items].sort((a, b) => {
-        const aValue = Number(a[sortKey]);
-        const bValue = Number(b[sortKey]);
+    const sortedItems = useMemo(() => {
+        return [...items].sort((a, b) => {
+            const aValue = a[sortKey];
+            const bValue = b[sortKey];
 
-        if (!isNaN(aValue) && !isNaN(bValue)) {
-            return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
-        }
+            if (!isNaN(Number(aValue)) && !isNaN(Number(bValue))) {
+                return sortOrder === 'asc' ? Number(aValue) - Number(bValue) : Number(bValue) - Number(aValue);
+            }
 
-        const aString = String(a[sortKey]);
-        const bString = String(b[sortKey]);
-        return sortOrder === 'asc'
-            ? aString.localeCompare(bString)
-            : bString.localeCompare(aString);
-    });
+            const aString = String(aValue).toLowerCase();
+            const bString = String(bValue).toLowerCase();
+            return sortOrder === 'asc'
+                ? aString.localeCompare(bString)
+                : bString.localeCompare(aString);
+        });
+    }, [items, sortKey, sortOrder]);
+
+    const headers = [
+        { label: 'Nome', key: 'name' },
+        { label: 'Quantia', key: 'priceUSD' },
+        { label: 'Preço', key: 'balance', hiddenOnMobile: true },
+        { label: 'Valor', key: 'value', hiddenOnMobile: true },
+        { label: 'Variação 24h', key: 'variation', hiddenOnMobile: true },
+    ];
 
     return (
-        <div className="flex flex-col gap-4">
-            {/* Header com botões de ordenação */}
-            <div className="grid grid-cols-5 gap-4 mb-4 text-teal-400">
-                <button onClick={() => handleSort('name')} className="text-left">Nome</button>
-                <button onClick={() => handleSort('priceUsd')} className="text-left">Quantia</button>
-                <button onClick={() => handleSort('balance')} className="text-left">Preço</button>
-                <button onClick={() => handleSort('value')} className="text-left">Valor</button>
-                <button onClick={() => handleSort('variation')} className="text-left">Variação 24h</button>
+        <div className="flex flex-col gap-4 h-full overflow-hidden">
+            {/* Cabeçalhos com botões de ordenação */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-4 text-teal-400">
+                {headers.map(({ label, key, hiddenOnMobile }) => (
+                    <button
+                        key={key}
+                        onClick={() => handleSort(key)}
+                        className={`text-left ${hiddenOnMobile ? 'hidden md:block' : ''}`}
+                        aria-sort={sortKey === key ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+                    >
+                        {label}
+                    </button>
+                ))}
             </div>
 
             {/* Lista rolável */}
-            <div className="flex flex-col gap-4 max-h-[40rem] overflow-y-auto no-scrollbar">
+            <div className="flex flex-col gap-4 overflow-y-auto no-scrollbar">
                 {sortedItems.map((item, index) => (
                     <CryptoItem
                         key={index}

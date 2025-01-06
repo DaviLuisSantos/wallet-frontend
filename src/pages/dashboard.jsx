@@ -240,8 +240,8 @@ const Dashboard = () => {
     };
 
     return (
-        <div className="container mx-auto p-4">
-            <div className="bg-gray-900 text-white p-6 rounded-xl shadow-lg w-full flex justify-between items-center">
+        <div className="container m-auto p-2">
+            <div className="bg-gray-900 text-white p-4 rounded-xl shadow-lg w-full flex justify-between items-center">
                 {/* Left Section: Total Balance */}
                 <div>
                     <h2 className="text-sm text-gray-400 uppercase">Total Balance</h2>

@@ -4,7 +4,7 @@ import Image from 'next/image';
 import CryptoLineChart from './CryptoLineChart';
 
 const defaultIcon = '';
-const CryptoItem = ({ icon, name, symbol, priceUSD, balance, value, variation, latestPrices }) => {
+const CryptoItem = ({ icon, name, symbol, priceUSD, balance, value, variation, latestPrices, isMobile }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [selectedRange, setSelectedRange] = useState('24h');
 
@@ -18,9 +18,9 @@ const CryptoItem = ({ icon, name, symbol, priceUSD, balance, value, variation, l
 
     return (
         <div className="bg-gray-800 rounded-lg p-4 shadow hover:bg-gray-700 transition duration-200">
-            <div className="grid grid-cols-5 gap-4 items-center cursor-pointer" onClick={toggleExpand}>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 items-center cursor-pointer" onClick={toggleExpand}>
                 {/* Ícone e Nome */}
-                <div className="flex items-center">
+                <div className="flex items-center col-span-2 sm:col-span-1">
                     <Image
                         src={iconPath}
                         alt={`${name} icon`}
@@ -35,14 +35,18 @@ const CryptoItem = ({ icon, name, symbol, priceUSD, balance, value, variation, l
                 </div>
 
                 {/* Preço */}
-                <div className="text-gray-400">
-                    <p>{balance}</p>
-                </div>
+                {!isMobile && (
+                    <div className="text-gray-400 hidden sm:block">
+                        <p>{balance}</p>
+                    </div>
+                )}
 
                 {/* Saldo */}
-                <div className="text-gray-400">
-                    <p>${priceUSD}</p>
-                </div>
+                {!isMobile && (
+                    <div className="text-gray-400 hidden sm:block">
+                        <p>${priceUSD}</p>
+                    </div>
+                )}
 
                 {/* Valor */}
                 <div className="text-teal-400 font-medium">
@@ -50,9 +54,11 @@ const CryptoItem = ({ icon, name, symbol, priceUSD, balance, value, variation, l
                 </div>
 
                 {/* Variação */}
-                <div className="text-gray-400">
-                    <p>{variation}%</p>
-                </div>
+                {!isMobile && (
+                    <div className="text-gray-400 hidden sm:block">
+                        <p>{variation}%</p>
+                    </div>
+                )}
             </div>
 
             {isExpanded && (
@@ -99,6 +105,7 @@ CryptoItem.propTypes = {
         timestamp: PropTypes.string.isRequired,
         price_usd: PropTypes.number.isRequired,
     })).isRequired,
+    isMobile: PropTypes.bool.isRequired,
 };
 
 export default CryptoItem;
