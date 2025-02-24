@@ -17,7 +17,7 @@ const CryptoItem = ({ icon, name, symbol, priceUSD, balance, value, variation, l
     };
 
     return (
-        <div className="bg-gray-800 rounded-lg p-4 shadow hover:bg-gray-700 transition duration-200">
+        <div className="bg-gray-800 rounded-lg p-4 shadow-lg hover:bg-gray-700 transition duration-200">
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 items-center cursor-pointer" onClick={toggleExpand}>
                 {/* Ícone e Nome */}
                 <div className="flex items-center col-span-2 sm:col-span-1">

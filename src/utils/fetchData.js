@@ -13,5 +13,6 @@ export const fetchData = async (wallets, prices, latestPrices, cryptocurrencies,
     }
     if (latestPrices.length === 0) await fetchLatestPrices(ids);
 
-    if (cryptocurrencies.length === 0) await fetchCryptocurrencies(ids);
+    //if (cryptocurrencies.length === 0) await fetchCryptocurrencies(ids);
+    return true;
 };

@@ -40,7 +40,7 @@ export const CryptocurrenciesProvider = ({ children }) => {
     };
 
     return (
-        <CryptocurrenciesContext.Provider value={{ cryptocurrencies, fetchCryptocurrencies }}>
+        <CryptocurrenciesContext.Provider value={{ cryptocurrencies, fetchCryptocurrencies, setCryptocurrencies }}>
             {children}
         </CryptocurrenciesContext.Provider>
     );

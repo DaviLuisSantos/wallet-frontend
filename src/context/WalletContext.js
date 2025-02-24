@@ -1,10 +1,12 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import { getWallet } from '../api/WalletService';
+import { CryptocurrenciesContext } from './CryptocurrenciesContext';
 
 export const WalletContext = createContext();
 
 export const WalletProvider = ({ children }) => {
     const [wallets, setWallets] = useState([]);
+    const { setCryptocurrencies } = useContext(CryptocurrenciesContext);
 
     useEffect(() => {
         // Retrieve wallets from local storage if available
@@ -25,7 +27,8 @@ export const WalletProvider = ({ children }) => {
             const response = await getWallet();
             const formattedData = response.map(wallet => ({
                 cryptoId: wallet.cryptoId,
-                amount: wallet.amount,
+                amount: wallet.balance,
+                categoryId: wallet.categoryId,
             }));
 
             setWallets(formattedData);
@@ -34,6 +37,11 @@ export const WalletProvider = ({ children }) => {
                 localStorage.setItem('wallets', JSON.stringify(formattedData));
             }
             console.log('Carteiras carregadas:', formattedData);
+
+            // Atualiza o estado do CryptocurrenciesContext
+            setCryptocurrencies(response.map(wallet => ({
+                ...wallet.cryptocurrency
+            })));
         } catch (error) {
             console.error('Erro ao buscar carteiras:', error);
         }

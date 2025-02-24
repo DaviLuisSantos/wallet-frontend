@@ -56,7 +56,7 @@ const Wallet = () => {
         };
 
         fetchCryptoItems();
-    }, [cryptocurrencies, prices, latestPrices, wallets, fetchWallets, fetchCryptocurrencies, fetchPrices, fetchLatestPrices]);
+    }, [cryptocurrencies, prices, latestPrices, wallets]);
 
     return (
         <div className="flex flex-col items-center h-screen overflow-hidden">

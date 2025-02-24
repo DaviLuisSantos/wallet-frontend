@@ -6,8 +6,9 @@ import { PricesProvider } from '../context/PricesContext';
 
 function MyApp({ Component, pageProps }) {
   return (
-    <WalletProvider>
-      <CryptocurrenciesProvider>
+
+    <CryptocurrenciesProvider>
+      <WalletProvider>
         <PricesProvider>
           <div className="flex h-screen">
             {/* Sidebar */}
@@ -21,8 +22,8 @@ function MyApp({ Component, pageProps }) {
             </div>
           </div>
         </PricesProvider>
-      </CryptocurrenciesProvider>
-    </WalletProvider>
+      </WalletProvider>
+    </CryptocurrenciesProvider>
   );
 }
 
